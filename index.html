@@ -621,8 +621,8 @@
     ctx.drawImage(loadedImg, drawX-(col*pieceW)+padding, drawY-(row*pieceH)+padding, drawW, drawH);
     ctx.restore();
 
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = 'rgba(58,46,39,0.85)';
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(58,46,39,0.45)';
     ctx.stroke();
 
     canvas.dataset.padding = padding;
@@ -733,13 +733,13 @@
   }
 
   const winPhrases = [
-    'Bravo Paul !! Tu es un champion !',
+    'Bravo, Paul ! Tu es un champion !',
     'Super ! Paul, tu es trop fort !',
-    'Whaaoouu ! Bravo baboun !',
-    'Excellent ti bouchon !',
-    'Haaa ! Il gère le bidouk !!',
-    'C\'est gagné Monsieur Paul !',
-    'Ça c\'est parfait bouchon tout rond !'
+    'Ouah ! Bravo, mon baboun !',
+    'Excellent, ti bouchon !',
+    'Ah ! Il gère, le bidouk !',
+    'C\'est gagné, Monsieur Paul !',
+    'Ça, c\'est parfait, bouchon tout rond !'
   ];
 
   function sayBravo(phrase){
