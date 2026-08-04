@@ -3,116 +3,241 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Puzzle Garage</title>
+<title>Puzzle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg-top:#FFD447;
-    --bg-bottom:#FF8A3D;
-    --panel:#FFF8EC;
-    --ink:#2B2320;
-    --accent:#2E7D6B;
-    --accent2:#D64545;
+    --bg-1:#FFE9BD;
+    --bg-2:#FF8F5E;
+    --panel:#FFFCF5;
+    --ink:#3A2E27;
+    --wood-1:#7A4A32;
+    --wood-2:#5B3222;
+    --mat-a:#F4E9D8;
+    --mat-b:#E7D9C1;
+    --teal:#1F9D82;
+    --teal-dark:#157A66;
+    --coral:#F0562E;
+    --coral-dark:#C7411E;
+    --gold:#F4B93E;
   }
   *{box-sizing:border-box;}
   body{
     margin:0;
     min-height:100vh;
-    font-family:'Trebuchet MS','Segoe UI',sans-serif;
-    background:linear-gradient(180deg,var(--bg-top) 0%,var(--bg-bottom) 100%);
+    font-family:'Nunito',sans-serif;
+    background:
+      radial-gradient(circle at 15% 10%, rgba(255,255,255,0.35), transparent 40%),
+      linear-gradient(160deg,var(--bg-1) 0%,var(--bg-2) 100%);
     color:var(--ink);
     display:flex;
     flex-direction:column;
     align-items:center;
-    padding:24px 16px 60px;
+    padding:28px 16px 60px;
   }
+
   h1{
-    font-size:clamp(26px,5vw,42px);
-    margin:6px 0 2px;
-    text-shadow:2px 2px 0 rgba(0,0,0,0.15);
+    font-family:'Fredoka',sans-serif;
+    font-weight:700;
+    font-size:clamp(32px,6vw,52px);
+    margin:4px 0 0;
+    color:var(--wood-2);
+    text-shadow:2px 3px 0 rgba(255,255,255,0.5);
+    letter-spacing:0.5px;
   }
-  .subtitle{ margin:0 0 18px; font-size:15px; opacity:0.85; }
+  .subtitle{
+    margin:4px 0 20px;
+    font-size:15px;
+    font-weight:600;
+    color:var(--ink);
+    opacity:0.75;
+    text-align:center;
+    max-width:420px;
+  }
+
   .panel{
     background:var(--panel);
-    border-radius:24px;
-    padding:18px 22px;
-    box-shadow:0 10px 0 rgba(0,0,0,0.15);
+    border-radius:26px;
+    padding:18px 24px;
+    box-shadow:0 3px 0 rgba(0,0,0,0.06) inset, 0 12px 0 rgba(90,55,35,0.25);
     display:flex;
     flex-wrap:wrap;
-    gap:16px;
+    gap:20px;
     align-items:center;
     justify-content:center;
     max-width:960px;
     width:100%;
     margin-bottom:22px;
+    border:3px solid rgba(90,55,35,0.12);
   }
-  .control{ display:flex; flex-direction:column; align-items:center; gap:6px; min-width:140px; }
-  .control label{ font-weight:bold; font-size:14px; }
-  input[type="file"]{ font-size:13px; max-width:160px; }
-  input[type="range"]{ width:150px; }
+  .control{ display:flex; flex-direction:column; align-items:center; gap:7px; min-width:150px; }
+  .control label{
+    font-family:'Fredoka',sans-serif;
+    font-weight:600;
+    font-size:14px;
+    color:var(--wood-2);
+  }
+  input[type="file"]{ display:none; }
+  .file-btn{
+    font-family:'Fredoka',sans-serif;
+    display:inline-block;
+    border:none;
+    border-radius:16px;
+    padding:11px 20px;
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+    color:white;
+    background:var(--teal);
+    box-shadow:0 5px 0 var(--teal-dark);
+    transition:transform .08s ease, box-shadow .08s ease;
+    white-space:nowrap;
+  }
+  .file-btn:active{ transform:translateY(4px); box-shadow:0 1px 0 var(--teal-dark); }
+  @media (hover:hover){
+    .file-btn:hover{ transform:translateY(-2px); box-shadow:0 7px 0 var(--teal-dark); }
+  }
+  .file-name{
+    margin-top:4px;
+    font-size:12px;
+    font-weight:700;
+    color:var(--wood-2);
+    max-width:170px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    text-align:center;
+  }
+  .file-name.empty{
+    opacity:0.5;
+    font-weight:600;
+  }
+  input[type="range"]{
+    width:150px;
+    accent-color:var(--teal);
+  }
   .piece-count{
-    font-size:13px; background:var(--accent); color:white;
-    border-radius:12px; padding:2px 10px; font-weight:bold;
+    font-family:'Fredoka',sans-serif;
+    font-size:13px;
+    background:var(--teal);
+    color:white;
+    border-radius:14px;
+    padding:3px 12px;
+    font-weight:600;
+    box-shadow:0 3px 0 var(--teal-dark);
   }
+
   button{
-    border:none; border-radius:14px; padding:12px 22px; font-size:16px;
-    font-weight:bold; cursor:pointer; color:white; background:var(--accent2);
-    box-shadow:0 5px 0 rgba(0,0,0,0.2); transition:transform .08s ease;
+    font-family:'Fredoka',sans-serif;
+    border:none;
+    border-radius:16px;
+    padding:13px 26px;
+    font-size:16px;
+    font-weight:600;
+    cursor:pointer;
+    color:white;
+    background:var(--coral);
+    box-shadow:0 5px 0 var(--coral-dark);
+    transition:transform .08s ease, box-shadow .08s ease;
   }
-  button:active{ transform:translateY(4px); box-shadow:0 1px 0 rgba(0,0,0,0.2); }
-  button.secondary{ background:var(--accent); }
+  button:active{ transform:translateY(4px); box-shadow:0 1px 0 var(--coral-dark); }
+  button.secondary{ background:var(--teal); box-shadow:0 5px 0 var(--teal-dark); }
+  button.secondary:active{ box-shadow:0 1px 0 var(--teal-dark); }
+  @media (hover:hover){
+    button:hover{ transform:translateY(-2px); box-shadow:0 7px 0 var(--coral-dark); }
+    button.secondary:hover{ box-shadow:0 7px 0 var(--teal-dark); }
+  }
+
+  #winToast{
+    display:none;
+    align-items:center;
+    gap:12px;
+    background:var(--gold);
+    color:var(--wood-2);
+    font-family:'Fredoka',sans-serif;
+    font-weight:700;
+    font-size:clamp(16px,3vw,20px);
+    padding:12px 22px;
+    border-radius:18px;
+    box-shadow:0 6px 0 #C98F1F;
+    margin-bottom:18px;
+    animation:pop .35s ease;
+  }
+  @keyframes pop{
+    from{ transform:scale(0.8) translateY(-8px); opacity:0; }
+    to{ transform:scale(1) translateY(0); opacity:1; }
+  }
+  #winToast button{ padding:9px 18px; font-size:14px; }
 
   .play-area{
     display:flex;
     flex-wrap:wrap;
-    gap:20px;
+    gap:22px;
     justify-content:center;
     align-items:flex-start;
     width:100%;
     max-width:960px;
   }
 
-  #frameWrap{ position:relative; flex:0 0 auto; }
+  #frameOuter{
+    flex:0 0 auto;
+    background:linear-gradient(155deg,var(--wood-1),var(--wood-2));
+    border-radius:22px;
+    padding:16px;
+    box-shadow:0 14px 0 rgba(0,0,0,0.18), inset 0 0 0 2px rgba(255,255,255,0.08);
+  }
   #frame{
     position:relative;
-    background:repeating-conic-gradient(#e7ded0 0% 25%,#ddd2bf 0% 50%) 50% / 26px 26px;
-    border-radius:16px;
-    box-shadow:0 10px 0 rgba(0,0,0,.18), inset 0 0 0 6px var(--panel);
+    background:repeating-conic-gradient(var(--mat-a) 0% 25%,var(--mat-b) 0% 50%) 50% / 26px 26px;
+    border-radius:12px;
+    box-shadow:inset 0 0 0 5px rgba(255,255,255,0.55), inset 0 2px 8px rgba(0,0,0,0.15);
     overflow:visible;
   }
   .slot{
     position:absolute;
-    border:2px dashed rgba(43,35,32,0.35);
+    border:2px dashed rgba(90,55,35,0.3);
     border-radius:4px;
     box-sizing:border-box;
     pointer-events:none;
   }
   .placeholder-msg{
     position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    text-align:center; padding:30px; font-size:16px; color:#8a7f6f; font-weight:bold;
-    background:repeating-conic-gradient(#e7ded0 0% 25%,#ddd2bf 0% 50%) 50% / 26px 26px;
-    border-radius:16px;
+    text-align:center; padding:30px; font-family:'Fredoka',sans-serif; font-size:16px;
+    color:rgba(90,55,35,0.55); font-weight:600; line-height:1.5;
+    background:repeating-conic-gradient(var(--mat-a) 0% 25%,var(--mat-b) 0% 50%) 50% / 26px 26px;
+    border-radius:12px;
   }
 
   #tray{
     flex:1 1 220px;
     min-width:220px;
     max-width:340px;
-    min-height:120px;
-    background:rgba(255,248,236,0.55);
-    border:3px dashed rgba(255,255,255,0.7);
-    border-radius:16px;
-    padding:14px;
+    min-height:140px;
+    background:rgba(255,252,245,0.6);
+    border:3px dashed rgba(90,55,35,0.3);
+    border-radius:20px;
+    padding:16px;
     display:flex;
     flex-wrap:wrap;
     gap:10px;
     align-content:flex-start;
     justify-content:center;
+    position:relative;
   }
-  #tray:empty::before{
-    content:"Bac à pièces";
-    color:rgba(43,35,32,0.5);
-    font-size:14px;
-    font-weight:bold;
+  #tray::before{
+    content:"🧺 Pièces";
+    position:absolute;
+    top:-13px;
+    left:16px;
+    background:var(--bg-2);
+    color:var(--wood-2);
+    font-family:'Fredoka',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    padding:2px 10px;
+    border-radius:10px;
   }
 
   .piece-canvas{
@@ -123,31 +248,25 @@
   }
   .piece-canvas.in-frame{ position:absolute; z-index:5; }
   .piece-canvas.dragging{ cursor:grabbing; z-index:999; filter:drop-shadow(0 8px 10px rgba(0,0,0,0.45)); }
-  .piece-canvas.placed-correct{ filter:drop-shadow(0 0 0 3px var(--accent)) drop-shadow(0 3px 4px rgba(0,0,0,0.3)); }
+  .piece-canvas.placed-correct{ filter:drop-shadow(0 0 0 3px var(--teal)) drop-shadow(0 3px 4px rgba(0,0,0,0.3)); }
 
-  #win-banner{
-    position:absolute; inset:0; display:none; align-items:center; justify-content:center;
-    background:rgba(255,255,255,0.9); font-size:clamp(24px,5vw,38px); font-weight:bold;
-    color:var(--accent2); text-align:center; flex-direction:column; gap:10px; z-index:1000;
-    border-radius:16px;
-  }
-  #win-banner span.emoji{ font-size:54px; }
-
-  footer{ margin-top:24px; font-size:12px; opacity:.7; text-align:center; max-width:480px; }
+  footer{ margin-top:26px; font-size:12px; opacity:.7; text-align:center; max-width:480px; }
 </style>
 </head>
 <body>
 
-<h1>🏁 Puzzle Garage 🏁</h1>
-<p class="subtitle">Choisis une image, règle le nombre de pièces, et glisse les pièces du bac dans le cadre !</p>
+<h1>🧩 Puzzle</h1>
+<p class="subtitle">Choisis une image, règle le nombre de pièces, et glisse les pièces du panier dans le cadre !</p>
 
 <div class="panel">
   <div class="control">
-    <label for="imgInput">📷 Choisir une image</label>
+    <label for="imgInput">Image du puzzle</label>
+    <label for="imgInput" class="file-btn">📷 Choisir une image</label>
     <input type="file" id="imgInput" accept="image/*">
+    <span class="file-name empty" id="fileNameLabel" title="">Aucune image choisie</span>
   </div>
   <div class="control">
-    <label for="sizeRange">🧩 Difficulté</label>
+    <label for="sizeRange">🎯 Difficulté</label>
     <input type="range" id="sizeRange" min="2" max="6" value="3" step="1">
     <span class="piece-count" id="pieceCountLabel">3 × 3 = 9 pièces</span>
   </div>
@@ -157,15 +276,15 @@
   </div>
 </div>
 
+<div id="winToast">
+  <span>🏆 Bravo, puzzle terminé !</span>
+  <button class="secondary" id="playAgainBtn">Rejouer</button>
+</div>
+
 <div class="play-area">
-  <div id="frameWrap">
+  <div id="frameOuter">
     <div id="frame">
-      <div class="placeholder-msg" id="placeholderMsg">Choisis une image ci-dessus<br>pour commencer 🚗</div>
-      <div id="win-banner">
-        <span class="emoji">🏆</span>
-        <span>Bravo, puzzle terminé !</span>
-        <button class="secondary" id="playAgainBtn" style="margin-top:6px;">Rejouer</button>
-      </div>
+      <div class="placeholder-msg" id="placeholderMsg">Choisis une image ci-dessus<br>pour commencer 🧩</div>
     </div>
   </div>
   <div id="tray"></div>
@@ -179,22 +298,23 @@
 <script>
 (function(){
   const imgInput = document.getElementById('imgInput');
+  const fileNameLabel = document.getElementById('fileNameLabel');
   const sizeRange = document.getElementById('sizeRange');
   const pieceCountLabel = document.getElementById('pieceCountLabel');
   const shuffleBtn = document.getElementById('shuffleBtn');
   const frame = document.getElementById('frame');
-  const frameWrap = document.getElementById('frameWrap');
+  const frameOuter = document.getElementById('frameOuter');
   const tray = document.getElementById('tray');
   const placeholderMsg = document.getElementById('placeholderMsg');
-  const winBanner = document.getElementById('win-banner');
+  const winToast = document.getElementById('winToast');
   const playAgainBtn = document.getElementById('playAgainBtn');
 
-  let loadedImg = null;   // HTMLImageElement
+  let loadedImg = null;
   let gridSize = 3;
   let stageSize = 480;
   let pieceSize = 0;
   let padding = 0;
-  let piecesData = []; // {row,col,canvas,placedRow,placedCol}
+  let piecesData = [];
 
   function updatePieceLabel(){
     const n = sizeRange.value;
@@ -206,6 +326,11 @@
   imgInput.addEventListener('change', (e)=>{
     const file = e.target.files[0];
     if(!file) return;
+
+    fileNameLabel.textContent = file.name;
+    fileNameLabel.title = file.name;
+    fileNameLabel.classList.remove('empty');
+
     const reader = new FileReader();
     reader.onload = (ev)=>{
       const img = new Image();
@@ -226,21 +351,20 @@
   });
 
   playAgainBtn.addEventListener('click', ()=>{
-    winBanner.style.display = 'none';
+    winToast.style.display = 'none';
     buildPuzzle();
   });
 
   function computeStageSize(){
-    const maxW = Math.min(frameWrap.parentElement.clientWidth * 0.55, 480);
+    const maxW = Math.min(frameOuter.parentElement.clientWidth * 0.55, 480);
     stageSize = Math.max(240, Math.min(480, maxW));
   }
 
   function buildPuzzle(){
     if(!loadedImg) return;
     placeholderMsg.style.display = 'none';
-    winBanner.style.display = 'none';
+    winToast.style.display = 'none';
 
-    // clear previous
     frame.querySelectorAll('.piece-canvas, .slot').forEach(el=>el.remove());
     tray.innerHTML = '';
 
@@ -252,7 +376,6 @@
     frame.style.width = stageSize + 'px';
     frame.style.height = stageSize + 'px';
 
-    // draw slot guides
     for(let r=0;r<n;r++){
       for(let c=0;c<n;c++){
         const slot = document.createElement('div');
@@ -265,9 +388,8 @@
       }
     }
 
-    // random edge signs
-    const vEdge = []; // between (r,c) and (r,c+1), size n x (n-1)
-    const hEdge = []; // between (r,c) and (r+1,c), size (n-1) x n
+    const vEdge = [];
+    const hEdge = [];
     for(let r=0;r<n;r++){
       vEdge.push([]);
       for(let c=0;c<n-1;c++) vEdge[r].push(Math.random()<0.5?1:-1);
@@ -360,7 +482,7 @@
     ctx.restore();
 
     ctx.lineWidth = 2.5;
-    ctx.strokeStyle = 'rgba(43,35,32,0.85)';
+    ctx.strokeStyle = 'rgba(58,46,39,0.85)';
     ctx.stroke();
 
     canvas.dataset.padding = padding;
@@ -368,7 +490,7 @@
   }
 
   function makeDraggable(canvas){
-    let dragging=false, offsetX=0, offsetY=0, startParent=null, startLeft=0, startTop=0, wasInFrame=false;
+    let dragging=false, offsetX=0, offsetY=0;
 
     function down(e){
       dragging = true;
@@ -379,11 +501,6 @@
       offsetX = clientX - rect.left;
       offsetY = clientY - rect.top;
 
-      wasInFrame = canvas.classList.contains('in-frame');
-      startParent = canvas.parentElement;
-
-      // switch to absolute positioning over the whole document for smooth dragging
-      const bodyRect = document.body.getBoundingClientRect();
       canvas.style.position = 'fixed';
       canvas.style.left = (rect.left) + 'px';
       canvas.style.top = (rect.top) + 'px';
@@ -438,7 +555,6 @@
         }
       }
 
-      // otherwise: return to tray
       canvas.style.position = 'static';
       canvas.classList.remove('in-frame');
       canvas.classList.remove('placed-correct');
@@ -467,7 +583,7 @@
     const allCorrect = piecesData.every(p=>
       p.dataset.placedRow===p.dataset.correctRow && p.dataset.placedCol===p.dataset.correctCol);
     if(allCorrect){
-      setTimeout(()=>{ winBanner.style.display='flex'; }, 200);
+      setTimeout(()=>{ winToast.style.display='flex'; }, 200);
     }
   }
 
