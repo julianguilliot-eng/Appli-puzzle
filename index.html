@@ -310,15 +310,16 @@
   const playAgainBtn = document.getElementById('playAgainBtn');
 
   let loadedImg = null;
-  let gridSize = 3;
-  let stageSize = 480;
+  let gridCols = 3, gridRows = 3;
   let pieceSize = 0;
   let padding = 0;
+  let boardW = 480, boardH = 480;
+  let drawX = 0, drawY = 0, drawW = 0, drawH = 0;
   let piecesData = [];
 
   function updatePieceLabel(){
     const n = sizeRange.value;
-    pieceCountLabel.textContent = `${n} × ${n} = ${n*n} pièces`;
+    pieceCountLabel.textContent = `≈ ${n*n} pièces`;
   }
   sizeRange.addEventListener('input', updatePieceLabel);
   updatePieceLabel();
@@ -336,7 +337,6 @@
       const img = new Image();
       img.onload = ()=>{
         loadedImg = img;
-        gridSize = parseInt(sizeRange.value,10);
         buildPuzzle();
       };
       img.src = ev.target.result;
@@ -346,7 +346,6 @@
 
   shuffleBtn.addEventListener('click', ()=>{
     if(!loadedImg){ imgInput.click(); return; }
-    gridSize = parseInt(sizeRange.value,10);
     buildPuzzle();
   });
 
@@ -355,9 +354,33 @@
     buildPuzzle();
   });
 
-  function computeStageSize(){
-    const maxW = Math.min(frameOuter.parentElement.clientWidth * 0.55, 480);
-    stageSize = Math.max(240, Math.min(480, maxW));
+  function computeGridAndBoard(){
+    const targetPieces = parseInt(sizeRange.value,10) ** 2;
+    const aspect = loadedImg.naturalWidth / loadedImg.naturalHeight;
+
+    let cols = Math.max(2, Math.round(Math.sqrt(targetPieces * aspect)));
+    let rows = Math.max(2, Math.round(targetPieces / cols));
+    gridCols = cols; gridRows = rows;
+
+    const containerW = frameOuter.parentElement.clientWidth || 480;
+    const maxBoardWidth = Math.min(containerW * 0.55, 480);
+    const maxBoardHeight = Math.min(window.innerHeight * 0.55, 480);
+
+    pieceSize = Math.min(maxBoardWidth / cols, maxBoardHeight / rows);
+    pieceSize = Math.max(pieceSize, 40);
+
+    boardW = cols * pieceSize;
+    boardH = rows * pieceSize;
+    padding = pieceSize * 0.32;
+
+    // "cover" scaling so the image fills the board without stretching/deforming
+    const scale = Math.max(boardW / loadedImg.naturalWidth, boardH / loadedImg.naturalHeight);
+    drawW = loadedImg.naturalWidth * scale;
+    drawH = loadedImg.naturalHeight * scale;
+    drawX = (boardW - drawW) / 2;
+    drawY = (boardH - drawH) / 2;
+
+    pieceCountLabel.textContent = `${cols} × ${rows} = ${cols*rows} pièces`;
   }
 
   function buildPuzzle(){
@@ -368,16 +391,13 @@
     frame.querySelectorAll('.piece-canvas, .slot').forEach(el=>el.remove());
     tray.innerHTML = '';
 
-    computeStageSize();
-    const n = gridSize;
-    pieceSize = stageSize / n;
-    padding = pieceSize * 0.32;
+    computeGridAndBoard();
 
-    frame.style.width = stageSize + 'px';
-    frame.style.height = stageSize + 'px';
+    frame.style.width = boardW + 'px';
+    frame.style.height = boardH + 'px';
 
-    for(let r=0;r<n;r++){
-      for(let c=0;c<n;c++){
+    for(let r=0;r<gridRows;r++){
+      for(let c=0;c<gridCols;c++){
         const slot = document.createElement('div');
         slot.className = 'slot';
         slot.style.left = (c*pieceSize) + 'px';
@@ -390,25 +410,25 @@
 
     const vEdge = [];
     const hEdge = [];
-    for(let r=0;r<n;r++){
+    for(let r=0;r<gridRows;r++){
       vEdge.push([]);
-      for(let c=0;c<n-1;c++) vEdge[r].push(Math.random()<0.5?1:-1);
+      for(let c=0;c<gridCols-1;c++) vEdge[r].push(Math.random()<0.5?1:-1);
     }
-    for(let r=0;r<n-1;r++){
+    for(let r=0;r<gridRows-1;r++){
       hEdge.push([]);
-      for(let c=0;c<n;c++) hEdge[r].push(Math.random()<0.5?1:-1);
+      for(let c=0;c<gridCols;c++) hEdge[r].push(Math.random()<0.5?1:-1);
     }
 
     piecesData = [];
     const order = [];
-    for(let r=0;r<n;r++) for(let c=0;c<n;c++) order.push({r,c});
+    for(let r=0;r<gridRows;r++) for(let c=0;c<gridCols;c++) order.push({r,c});
     shuffleArray(order);
 
     order.forEach(({r,c})=>{
-      const top    = (r===0)   ? 0 : -hEdge[r-1][c];
-      const bottom = (r===n-1) ? 0 :  hEdge[r][c];
-      const left   = (c===0)   ? 0 : -vEdge[r][c-1];
-      const right  = (c===n-1) ? 0 :  vEdge[r][c];
+      const top    = (r===0)         ? 0 : -hEdge[r-1][c];
+      const bottom = (r===gridRows-1)? 0 :  hEdge[r][c];
+      const left   = (c===0)         ? 0 : -vEdge[r][c-1];
+      const right  = (c===gridCols-1)? 0 :  vEdge[r][c];
 
       const canvas = makePieceCanvas(r,c,top,right,bottom,left);
       canvas.dataset.correctRow = r;
@@ -478,7 +498,7 @@
 
     ctx.save();
     ctx.clip();
-    ctx.drawImage(loadedImg, -(col*pieceSize)+padding, -(row*pieceSize)+padding, stageSize, stageSize);
+    ctx.drawImage(loadedImg, drawX-(col*pieceSize)+padding, drawY-(row*pieceSize)+padding, drawW, drawH);
     ctx.restore();
 
     ctx.lineWidth = 2.5;
@@ -534,8 +554,8 @@
         const localY = centerY - frameRect.top;
         let col = Math.floor(localX / pieceSize);
         let row = Math.floor(localY / pieceSize);
-        col = Math.max(0, Math.min(gridSize-1, col));
-        row = Math.max(0, Math.min(gridSize-1, row));
+        col = Math.max(0, Math.min(gridCols-1, col));
+        row = Math.max(0, Math.min(gridRows-1, row));
 
         const occupied = piecesData.some(p => p!==canvas && p.dataset.placed==="1" &&
           parseInt(p.dataset.placedRow)===row && parseInt(p.dataset.placedCol)===col);
@@ -583,7 +603,24 @@
     const allCorrect = piecesData.every(p=>
       p.dataset.placedRow===p.dataset.correctRow && p.dataset.placedCol===p.dataset.correctCol);
     if(allCorrect){
-      setTimeout(()=>{ winToast.style.display='flex'; }, 200);
+      setTimeout(()=>{
+        winToast.style.display='flex';
+        sayBravo();
+      }, 200);
+    }
+  }
+
+  function sayBravo(){
+    if(!('speechSynthesis' in window)) return;
+    try{
+      window.speechSynthesis.cancel(); // stop any previous utterance
+      const utter = new SpeechSynthesisUtterance('Bravo Paul !');
+      utter.lang = 'fr-FR';
+      utter.rate = 0.95;
+      utter.pitch = 1.15;
+      window.speechSynthesis.speak(utter);
+    }catch(err){
+      // silently ignore if speech synthesis isn't available
     }
   }
 
