@@ -356,7 +356,7 @@
   </div>
 
   <div id="winToast">
-    <span>🏆 Bravo, puzzle terminé !</span>
+    <span id="winToastText">🏆 Bravo, puzzle terminé !</span>
     <button class="secondary" id="playAgainBtn">Rejouer</button>
   </div>
 
@@ -388,6 +388,7 @@
   const tray = document.getElementById('tray');
   const placeholderMsg = document.getElementById('placeholderMsg');
   const winToast = document.getElementById('winToast');
+  const winToastText = document.getElementById('winToastText');
   const playAgainBtn = document.getElementById('playAgainBtn');
   const screenSetup = document.getElementById('screenSetup');
   const screenPuzzle = document.getElementById('screenPuzzle');
@@ -722,18 +723,30 @@
     const allCorrect = piecesData.every(p=>
       p.dataset.placedRow===p.dataset.correctRow && p.dataset.placedCol===p.dataset.correctCol);
     if(allCorrect){
-      sayBravo();
+      const phrase = winPhrases[Math.floor(Math.random()*winPhrases.length)];
+      sayBravo(phrase);
       setTimeout(()=>{
+        winToastText.textContent = '🏆 ' + phrase;
         winToast.style.display='flex';
       }, 200);
     }
   }
 
-  function sayBravo(){
+  const winPhrases = [
+    'Bravo Paul !! Tu es un champion !',
+    'Super ! Paul, tu es trop fort !',
+    'Whaaoouu ! Bravo baboun !',
+    'Excellent ti bouchon !',
+    'Haaa ! Il gère le bidouk !!',
+    'C\'est gagné Monsieur Paul !',
+    'Ça c\'est parfait bouchon tout rond !'
+  ];
+
+  function sayBravo(phrase){
     if(!('speechSynthesis' in window)) return;
     try{
       window.speechSynthesis.cancel(); // stop any previous utterance
-      const utter = new SpeechSynthesisUtterance('Bravo Paul !');
+      const utter = new SpeechSynthesisUtterance(phrase);
       utter.lang = 'fr-FR';
       utter.rate = 0.95;
       utter.pitch = 1.15;
