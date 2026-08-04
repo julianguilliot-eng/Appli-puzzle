@@ -34,8 +34,6 @@
     color:var(--ink);
   }
 
-  body.no-scroll{ overflow:hidden; height:100vh; }
-
   .screen{ display:none; }
   .screen.active{ display:flex; }
 
@@ -47,11 +45,9 @@
   }
 
   #screenPuzzle.active{
-    position:fixed;
-    inset:0;
+    min-height:100vh;
     flex-direction:column;
-    padding:14px 16px;
-    z-index:10;
+    padding:14px 16px 30px;
   }
 
   .puzzle-topbar{
@@ -326,10 +322,16 @@
 
   <div class="panel">
     <div class="control">
-      <label for="imgInput">Image du puzzle</label>
+      <label for="imgInput">Image unique</label>
       <label for="imgInput" class="file-btn">📷 Choisir une image</label>
       <input type="file" id="imgInput" accept="image/*">
       <span class="file-name empty" id="fileNameLabel" title="">Aucune image choisie</span>
+    </div>
+    <div class="control">
+      <label for="folderInput">Dossier d'images (optionnel)</label>
+      <label for="folderInput" class="file-btn">🗂️ Choisir un dossier</label>
+      <input type="file" id="folderInput" accept="image/*" webkitdirectory directory multiple>
+      <span class="file-name empty" id="folderNameLabel" title="">Aucun dossier choisi</span>
     </div>
     <div class="control">
       <label for="sizeRange">🎯 Difficulté</label>
@@ -341,6 +343,8 @@
       <button id="startBtn">🧩 Lancer le puzzle</button>
     </div>
   </div>
+
+  <p class="subtitle" style="margin-top:-6px;">Si un dossier est choisi, le bouton "🔀 Nouveau" passera à l'image suivante du dossier à chaque clic.</p>
 
   <footer>
     Astuce : cette page ne contient aucune image — choisis simplement une photo sur ton appareil.
@@ -377,6 +381,8 @@
 (function(){
   const imgInput = document.getElementById('imgInput');
   const fileNameLabel = document.getElementById('fileNameLabel');
+  const folderInput = document.getElementById('folderInput');
+  const folderNameLabel = document.getElementById('folderNameLabel');
   const sizeRange = document.getElementById('sizeRange');
   const pieceCountLabel = document.getElementById('pieceCountLabel');
   const startBtn = document.getElementById('startBtn');
@@ -397,17 +403,18 @@
     if(name === 'puzzle'){
       screenSetup.classList.remove('active');
       screenPuzzle.classList.add('active');
-      document.body.classList.add('no-scroll');
+      window.scrollTo(0,0);
     } else {
       screenPuzzle.classList.remove('active');
       screenSetup.classList.add('active');
-      document.body.classList.remove('no-scroll');
     }
   }
 
   backBtn.addEventListener('click', ()=> showScreen('setup'));
 
   let loadedImg = null;
+  let folderImages = [];
+  let folderIndex = -1;
   let gridCols = 3, gridRows = 3;
   let pieceW = 0, pieceH = 0;
   let padding = 0;
@@ -426,6 +433,12 @@
     const file = e.target.files[0];
     if(!file) return;
 
+    // Choosing a single image explicitly overrides folder mode
+    folderImages = [];
+    folderIndex = -1;
+    folderNameLabel.textContent = 'Aucun dossier choisi';
+    folderNameLabel.classList.add('empty');
+
     fileNameLabel.textContent = file.name;
     fileNameLabel.title = file.name;
     fileNameLabel.classList.remove('empty');
@@ -441,6 +454,40 @@
     reader.readAsDataURL(file);
   });
 
+  folderInput.addEventListener('change', (e)=>{
+    const files = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
+    if(files.length === 0){
+      folderNameLabel.textContent = 'Aucune image trouvée dans ce dossier';
+      folderNameLabel.classList.add('empty');
+      return;
+    }
+    folderImages = files;
+    folderIndex = 0;
+    folderNameLabel.textContent = `${files.length} image(s) dans le dossier`;
+    folderNameLabel.title = files.map(f=>f.name).join(', ');
+    folderNameLabel.classList.remove('empty');
+    loadImageFromFolder(folderIndex);
+  });
+
+  function loadImageFromFolder(index, onDone){
+    const file = folderImages[index];
+    if(!file) return;
+    fileNameLabel.textContent = file.name;
+    fileNameLabel.title = file.name;
+    fileNameLabel.classList.remove('empty');
+
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        loadedImg = img;
+        if(onDone) onDone();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
   function warmUpSpeech(){
     if(!('speechSynthesis' in window)) return;
     try{
@@ -451,7 +498,11 @@
   }
 
   startBtn.addEventListener('click', ()=>{
-    if(!loadedImg){ imgInput.click(); return; }
+    if(!loadedImg){
+      if(folderImages.length > 0) return; // image still loading from folder
+      imgInput.click();
+      return;
+    }
     warmUpSpeech();
     showScreen('puzzle');
     // build after the screen is visible so measurements (clientWidth/Height) are correct
@@ -459,6 +510,11 @@
   });
 
   newFromPuzzleBtn.addEventListener('click', ()=>{
+    if(folderImages.length > 0){
+      folderIndex = (folderIndex + 1) % folderImages.length;
+      loadImageFromFolder(folderIndex, ()=> buildPuzzle());
+      return;
+    }
     if(!loadedImg) return;
     buildPuzzle();
   });
@@ -480,7 +536,7 @@
     const containerW = screenPuzzle.clientWidth || window.innerWidth;
     const topbarH = document.querySelector('.puzzle-topbar').offsetHeight || 50;
     const stacked = containerW < 700;
-    const availableH = (screenPuzzle.clientHeight || window.innerHeight) - topbarH - 28 - (stacked ? 190 : 0);
+    const availableH = window.innerHeight - topbarH - 28 - (stacked ? 190 : 0);
 
     const maxBoardWidth = Math.min(containerW * (stacked ? 0.92 : 0.68), 720);
     const maxBoardHeight = Math.min(availableH, 720);
