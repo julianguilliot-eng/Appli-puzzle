@@ -32,10 +32,62 @@
       radial-gradient(circle at 15% 10%, rgba(255,255,255,0.35), transparent 40%),
       linear-gradient(160deg,var(--bg-1) 0%,var(--bg-2) 100%);
     color:var(--ink);
-    display:flex;
+  }
+
+  body.no-scroll{ overflow:hidden; height:100vh; }
+
+  .screen{ display:none; }
+  .screen.active{ display:flex; }
+
+  #screenSetup{
     flex-direction:column;
     align-items:center;
+    width:100%;
     padding:28px 16px 60px;
+  }
+
+  #screenPuzzle.active{
+    position:fixed;
+    inset:0;
+    flex-direction:column;
+    padding:14px 16px;
+    z-index:10;
+  }
+
+  .puzzle-topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    width:100%;
+    max-width:1100px;
+    margin:0 auto 14px;
+    flex:0 0 auto;
+  }
+  .puzzle-topbar .topbar-title{
+    font-family:'Fredoka',sans-serif;
+    font-weight:700;
+    font-size:clamp(20px,3.5vw,28px);
+    color:var(--wood-2);
+    text-shadow:1px 2px 0 rgba(255,255,255,0.5);
+  }
+  #backBtn{
+    padding:10px 18px;
+    font-size:14px;
+    background:var(--panel);
+    color:var(--wood-2);
+    box-shadow:0 4px 0 rgba(90,55,35,0.3);
+  }
+  #backBtn:active{ box-shadow:0 1px 0 rgba(90,55,35,0.3); }
+  @media (hover:hover){
+    #backBtn:hover{ box-shadow:0 6px 0 rgba(90,55,35,0.3); }
+  }
+  #newFromPuzzleBtn{ padding:10px 18px; font-size:14px; }
+
+  #screenPuzzle .play-area{
+    flex:1 1 auto;
+    min-height:0;
+    align-items:center;
   }
 
   h1{
@@ -176,9 +228,10 @@
     flex-wrap:wrap;
     gap:22px;
     justify-content:center;
-    align-items:flex-start;
+    align-items:center;
     width:100%;
-    max-width:960px;
+    max-width:1100px;
+    margin:0 auto;
   }
 
   #frameOuter{
@@ -210,34 +263,45 @@
     border-radius:12px;
   }
 
-  #tray{
-    flex:1 1 220px;
-    min-width:220px;
-    max-width:340px;
-    min-height:140px;
+  #trayWrap{
+    flex:0 1 300px;
+    max-width:300px;
+    min-width:200px;
     background:rgba(255,252,245,0.6);
     border:3px dashed rgba(90,55,35,0.3);
     border-radius:20px;
-    padding:16px;
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+    min-height:120px;
+    max-height:min(70vh,560px);
+  }
+  #trayWrap .tray-label{
+    flex:0 0 auto;
+    font-family:'Fredoka',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    color:var(--wood-2);
+    margin-bottom:8px;
+    text-align:center;
+  }
+  #tray{
+    flex:1 1 auto;
+    min-height:0;
+    overflow-y:auto;
     display:flex;
     flex-wrap:wrap;
     gap:10px;
     align-content:flex-start;
     justify-content:center;
-    position:relative;
+    padding-right:2px;
   }
-  #tray::before{
-    content:"🧺 Pièces";
-    position:absolute;
-    top:-13px;
-    left:16px;
-    background:var(--bg-2);
-    color:var(--wood-2);
-    font-family:'Fredoka',sans-serif;
-    font-weight:600;
-    font-size:13px;
-    padding:2px 10px;
-    border-radius:10px;
+  #tray::-webkit-scrollbar{ width:8px; }
+  #tray::-webkit-scrollbar-thumb{ background:rgba(90,55,35,0.35); border-radius:8px; }
+
+  @media (max-width:700px){
+    #trayWrap{ height:170px !important; max-width:none; width:100%; }
   }
 
   .piece-canvas{
@@ -245,6 +309,7 @@
     touch-action:none;
     filter:drop-shadow(0 3px 4px rgba(0,0,0,0.35));
     z-index:5;
+    flex:0 0 auto;
   }
   .piece-canvas.in-frame{ position:absolute; z-index:5; }
   .piece-canvas.dragging{ cursor:grabbing; z-index:999; filter:drop-shadow(0 8px 10px rgba(0,0,0,0.45)); }
@@ -255,45 +320,58 @@
 </head>
 <body>
 
-<h1>🧩 Puzzle</h1>
-<p class="subtitle">Choisis une image, règle le nombre de pièces, et glisse les pièces du panier dans le cadre !</p>
+<div id="screenSetup" class="screen active">
+  <h1>🧩 Puzzle</h1>
+  <p class="subtitle">Choisis une image et règle le nombre de pièces, puis lance le puzzle !</p>
 
-<div class="panel">
-  <div class="control">
-    <label for="imgInput">Image du puzzle</label>
-    <label for="imgInput" class="file-btn">📷 Choisir une image</label>
-    <input type="file" id="imgInput" accept="image/*">
-    <span class="file-name empty" id="fileNameLabel" title="">Aucune image choisie</span>
-  </div>
-  <div class="control">
-    <label for="sizeRange">🎯 Difficulté</label>
-    <input type="range" id="sizeRange" min="2" max="6" value="3" step="1">
-    <span class="piece-count" id="pieceCountLabel">3 × 3 = 9 pièces</span>
-  </div>
-  <div class="control">
-    <label>&nbsp;</label>
-    <button id="shuffleBtn">🔀 Nouveau puzzle</button>
-  </div>
-</div>
-
-<div id="winToast">
-  <span>🏆 Bravo, puzzle terminé !</span>
-  <button class="secondary" id="playAgainBtn">Rejouer</button>
-</div>
-
-<div class="play-area">
-  <div id="frameOuter">
-    <div id="frame">
-      <div class="placeholder-msg" id="placeholderMsg">Choisis une image ci-dessus<br>pour commencer 🧩</div>
+  <div class="panel">
+    <div class="control">
+      <label for="imgInput">Image du puzzle</label>
+      <label for="imgInput" class="file-btn">📷 Choisir une image</label>
+      <input type="file" id="imgInput" accept="image/*">
+      <span class="file-name empty" id="fileNameLabel" title="">Aucune image choisie</span>
+    </div>
+    <div class="control">
+      <label for="sizeRange">🎯 Difficulté</label>
+      <input type="range" id="sizeRange" min="2" max="6" value="3" step="1">
+      <span class="piece-count" id="pieceCountLabel">≈ 9 pièces</span>
+    </div>
+    <div class="control">
+      <label>&nbsp;</label>
+      <button id="startBtn">🧩 Lancer le puzzle</button>
     </div>
   </div>
-  <div id="tray"></div>
+
+  <footer>
+    Astuce : cette page ne contient aucune image — choisis simplement une photo sur ton appareil.
+    Fonctionne 100% hors-ligne une fois ouverte, aucune donnée n'est envoyée nulle part.
+  </footer>
 </div>
 
-<footer>
-  Astuce : cette page ne contient aucune image — choisis simplement une photo sur ton appareil.
-  Fonctionne 100% hors-ligne une fois ouverte, aucune donnée n'est envoyée nulle part.
-</footer>
+<div id="screenPuzzle" class="screen">
+  <div class="puzzle-topbar">
+    <button id="backBtn">← Retour</button>
+    <span class="topbar-title">🧩 Puzzle</span>
+    <button id="newFromPuzzleBtn" class="secondary">🔀 Nouveau</button>
+  </div>
+
+  <div id="winToast">
+    <span>🏆 Bravo, puzzle terminé !</span>
+    <button class="secondary" id="playAgainBtn">Rejouer</button>
+  </div>
+
+  <div class="play-area">
+    <div id="frameOuter">
+      <div id="frame">
+        <div class="placeholder-msg" id="placeholderMsg">Choisis une image<br>pour commencer 🧩</div>
+      </div>
+    </div>
+    <div id="trayWrap">
+      <div class="tray-label">🧺 Pièces</div>
+      <div id="tray"></div>
+    </div>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -301,13 +379,32 @@
   const fileNameLabel = document.getElementById('fileNameLabel');
   const sizeRange = document.getElementById('sizeRange');
   const pieceCountLabel = document.getElementById('pieceCountLabel');
-  const shuffleBtn = document.getElementById('shuffleBtn');
+  const startBtn = document.getElementById('startBtn');
+  const backBtn = document.getElementById('backBtn');
+  const newFromPuzzleBtn = document.getElementById('newFromPuzzleBtn');
   const frame = document.getElementById('frame');
   const frameOuter = document.getElementById('frameOuter');
+  const trayWrap = document.getElementById('trayWrap');
   const tray = document.getElementById('tray');
   const placeholderMsg = document.getElementById('placeholderMsg');
   const winToast = document.getElementById('winToast');
   const playAgainBtn = document.getElementById('playAgainBtn');
+  const screenSetup = document.getElementById('screenSetup');
+  const screenPuzzle = document.getElementById('screenPuzzle');
+
+  function showScreen(name){
+    if(name === 'puzzle'){
+      screenSetup.classList.remove('active');
+      screenPuzzle.classList.add('active');
+      document.body.classList.add('no-scroll');
+    } else {
+      screenPuzzle.classList.remove('active');
+      screenSetup.classList.add('active');
+      document.body.classList.remove('no-scroll');
+    }
+  }
+
+  backBtn.addEventListener('click', ()=> showScreen('setup'));
 
   let loadedImg = null;
   let gridCols = 3, gridRows = 3;
@@ -337,15 +434,31 @@
       const img = new Image();
       img.onload = ()=>{
         loadedImg = img;
-        buildPuzzle();
       };
       img.src = ev.target.result;
     };
     reader.readAsDataURL(file);
   });
 
-  shuffleBtn.addEventListener('click', ()=>{
+  function warmUpSpeech(){
+    if(!('speechSynthesis' in window)) return;
+    try{
+      const warm = new SpeechSynthesisUtterance(' ');
+      warm.volume = 0;
+      window.speechSynthesis.speak(warm);
+    }catch(err){ /* ignore */ }
+  }
+
+  startBtn.addEventListener('click', ()=>{
     if(!loadedImg){ imgInput.click(); return; }
+    warmUpSpeech();
+    showScreen('puzzle');
+    // build after the screen is visible so measurements (clientWidth/Height) are correct
+    requestAnimationFrame(()=> buildPuzzle());
+  });
+
+  newFromPuzzleBtn.addEventListener('click', ()=>{
+    if(!loadedImg) return;
     buildPuzzle();
   });
 
@@ -363,9 +476,13 @@
     let rows = Math.max(2, Math.round(targetPieces / cols));
     gridCols = cols; gridRows = rows;
 
-    const containerW = frameOuter.parentElement.clientWidth || 480;
-    const maxBoardWidth = Math.min(containerW * 0.55, 480);
-    const maxBoardHeight = Math.min(window.innerHeight * 0.55, 480);
+    const containerW = screenPuzzle.clientWidth || window.innerWidth;
+    const topbarH = document.querySelector('.puzzle-topbar').offsetHeight || 50;
+    const stacked = containerW < 700;
+    const availableH = (screenPuzzle.clientHeight || window.innerHeight) - topbarH - 28 - (stacked ? 190 : 0);
+
+    const maxBoardWidth = Math.min(containerW * (stacked ? 0.92 : 0.68), 720);
+    const maxBoardHeight = Math.min(availableH, 720);
 
     // Fit the whole image inside the available space, preserving its exact
     // aspect ratio (no cropping, no stretching).
@@ -395,6 +512,7 @@
 
     frame.style.width = boardW + 'px';
     frame.style.height = boardH + 'px';
+    trayWrap.style.height = boardH + 'px';
 
     for(let r=0;r<gridRows;r++){
       for(let c=0;c<gridCols;c++){
@@ -604,9 +722,9 @@
     const allCorrect = piecesData.every(p=>
       p.dataset.placedRow===p.dataset.correctRow && p.dataset.placedCol===p.dataset.correctCol);
     if(allCorrect){
+      sayBravo();
       setTimeout(()=>{
         winToast.style.display='flex';
-        sayBravo();
       }, 200);
     }
   }
@@ -619,6 +737,7 @@
       utter.lang = 'fr-FR';
       utter.rate = 0.95;
       utter.pitch = 1.15;
+      utter.volume = 1;
       window.speechSynthesis.speak(utter);
     }catch(err){
       // silently ignore if speech synthesis isn't available
@@ -626,7 +745,7 @@
   }
 
   window.addEventListener('resize', ()=>{
-    if(loadedImg) buildPuzzle();
+    if(loadedImg && screenPuzzle.classList.contains('active')) buildPuzzle();
   });
 
 })();
