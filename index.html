@@ -24,6 +24,7 @@
     --gold:#F4B93E;
   }
   *{box-sizing:border-box;}
+  html, body{ overscroll-behavior-y: contain; }
   body{
     margin:0;
     min-height:100vh;
@@ -229,8 +230,8 @@
     max-width:1500px;
     margin:0 auto;
   }
-  @media (min-width:701px){
-    .play-area{ flex-wrap:nowrap; }
+  @media (min-width:701px), (orientation:landscape){
+    .play-area{ flex-wrap:nowrap !important; }
   }
 
   #frameOuter{
@@ -298,13 +299,16 @@
   #tray::-webkit-scrollbar{ width:8px; }
   #tray::-webkit-scrollbar-thumb{ background:rgba(90,55,35,0.35); border-radius:8px; }
 
-  @media (max-width:700px){
+  @media (max-width:700px) and (orientation:portrait){
     #trayWrap{ height:170px !important; max-width:none; width:100%; }
   }
 
   .piece-canvas{
     cursor:grab;
     touch-action:none;
+    -webkit-touch-callout:none;
+    -webkit-user-select:none;
+    user-select:none;
     filter:drop-shadow(0 3px 4px rgba(0,0,0,0.35));
     z-index:5;
     flex:0 0 auto;
@@ -538,7 +542,8 @@
 
     const containerW = playArea.clientWidth || screenPuzzle.clientWidth || window.innerWidth;
     const topbarH = document.querySelector('.puzzle-topbar').offsetHeight || 50;
-    const stacked = containerW < 700;
+    const sideBySide = window.matchMedia('(min-width:701px), (orientation:landscape)').matches;
+    const stacked = !sideBySide;
     const availableH = window.innerHeight - topbarH - 28 - (stacked ? 190 : 0);
 
     let maxBoardWidth;
@@ -695,19 +700,33 @@
     return canvas;
   }
 
+  function findScrollTarget(el){
+    let node = el.parentElement;
+    while(node && node !== document.body){
+      const style = window.getComputedStyle(node);
+      if((style.overflowY === 'auto' || style.overflowY === 'scroll') && node.scrollHeight > node.clientHeight){
+        return node;
+      }
+      node = node.parentElement;
+    }
+    return document.scrollingElement || document.documentElement;
+  }
+
   function makeDraggable(canvas){
     let dragging = false;
     let offsetX=0, offsetY=0;
     let pendingTimer = null;
     let startX=0, startY=0;
+    let scrolling = false;
+    let scrollTarget = null;
+    let lastY = 0;
 
-    const HOLD_DELAY = 140;       // ms before a touch is treated as "pick up the piece"
-    const MOVE_CANCEL_THRESHOLD = 10; // px of movement that cancels pickup (= it's a scroll)
+    const HOLD_DELAY = 130;       // ms before a still touch is treated as "pick up the piece"
+    const MOVE_CANCEL_THRESHOLD = 8; // px of movement that cancels pickup (= it's a scroll)
 
     function beginDrag(clientX, clientY){
       dragging = true;
       canvas.classList.add('dragging');
-      canvas.style.touchAction = 'none';
       const rect = canvas.getBoundingClientRect();
       offsetX = clientX - rect.left;
       offsetY = clientY - rect.top;
@@ -726,9 +745,10 @@
     function touchStart(e){
       const t = e.touches[0];
       startX = t.clientX; startY = t.clientY;
+      lastY = startY;
+      scrolling = false;
+      scrollTarget = null;
       clearPending();
-      // Don't preventDefault here: if this turns out to be a scroll gesture,
-      // the browser needs to be free to handle it natively.
       pendingTimer = setTimeout(()=>{
         pendingTimer = null;
         beginDrag(startX, startY);
@@ -743,26 +763,46 @@
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
-      if(!dragging){
-        if(pendingTimer){
-          const dx = clientX-startX, dy = clientY-startY;
-          if(Math.hypot(dx,dy) > MOVE_CANCEL_THRESHOLD){
-            clearPending(); // the finger moved before the hold completed: it's a scroll, not a pickup
-          }
-        }
+      if(dragging){
+        if(e.cancelable) e.preventDefault();
+        canvas.style.left = (clientX-offsetX) + 'px';
+        canvas.style.top = (clientY-offsetY) + 'px';
         return;
       }
-      if(e.cancelable) e.preventDefault();
-      canvas.style.left = (clientX-offsetX) + 'px';
-      canvas.style.top = (clientY-offsetY) + 'px';
+
+      if(scrolling){
+        if(e.cancelable) e.preventDefault();
+        const deltaY = lastY - clientY;
+        if(scrollTarget) scrollTarget.scrollTop += deltaY;
+        lastY = clientY;
+        return;
+      }
+
+      if(pendingTimer){
+        const dx = clientX-startX, dy = clientY-startY;
+        if(Math.hypot(dx,dy) > MOVE_CANCEL_THRESHOLD){
+          // The finger moved before the hold completed: treat this as a
+          // scroll gesture and take over scrolling manually (since the
+          // canvas can't rely on the browser's native touch scrolling
+          // while it's also used for dragging pieces).
+          clearPending();
+          scrolling = true;
+          scrollTarget = findScrollTarget(canvas);
+          if(e.cancelable) e.preventDefault();
+          const deltaY = lastY - clientY;
+          if(scrollTarget) scrollTarget.scrollTop += deltaY;
+          lastY = clientY;
+        }
+      }
     }
 
     function up(e){
       clearPending();
+      scrolling = false;
+      scrollTarget = null;
       if(!dragging) return;
       dragging = false;
       canvas.classList.remove('dragging');
-      canvas.style.touchAction = 'pan-y';
 
       const frameRect = frame.getBoundingClientRect();
       const canvasRect = canvas.getBoundingClientRect();
