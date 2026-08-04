@@ -226,8 +226,11 @@
     justify-content:center;
     align-items:center;
     width:100%;
-    max-width:1100px;
+    max-width:1500px;
     margin:0 auto;
+  }
+  @media (min-width:701px){
+    .play-area{ flex-wrap:nowrap; }
   }
 
   #frameOuter{
@@ -260,9 +263,8 @@
   }
 
   #trayWrap{
-    flex:0 1 300px;
-    max-width:300px;
-    min-width:200px;
+    flex:0 0 auto;
+    width:clamp(220px,24vw,320px);
     background:rgba(255,252,245,0.6);
     border:3px dashed rgba(90,55,35,0.3);
     border-radius:20px;
@@ -271,7 +273,7 @@
     flex-direction:column;
     position:relative;
     min-height:120px;
-    max-height:min(70vh,560px);
+    max-height:min(80vh,900px);
   }
   #trayWrap .tray-label{
     flex:0 0 auto;
@@ -364,7 +366,7 @@
     <button class="secondary" id="playAgainBtn">Rejouer</button>
   </div>
 
-  <div class="play-area">
+  <div class="play-area" id="playArea">
     <div id="frameOuter">
       <div id="frame">
         <div class="placeholder-msg" id="placeholderMsg">Choisis une image<br>pour commencer 🧩</div>
@@ -398,6 +400,7 @@
   const playAgainBtn = document.getElementById('playAgainBtn');
   const screenSetup = document.getElementById('screenSetup');
   const screenPuzzle = document.getElementById('screenPuzzle');
+  const playArea = document.getElementById('playArea');
 
   function showScreen(name){
     if(name === 'puzzle'){
@@ -533,13 +536,20 @@
     let rows = Math.max(2, Math.round(targetPieces / cols));
     gridCols = cols; gridRows = rows;
 
-    const containerW = screenPuzzle.clientWidth || window.innerWidth;
+    const containerW = playArea.clientWidth || screenPuzzle.clientWidth || window.innerWidth;
     const topbarH = document.querySelector('.puzzle-topbar').offsetHeight || 50;
     const stacked = containerW < 700;
     const availableH = window.innerHeight - topbarH - 28 - (stacked ? 190 : 0);
 
-    const maxBoardWidth = Math.min(containerW * (stacked ? 0.92 : 0.68), 720);
-    const maxBoardHeight = Math.min(availableH, 720);
+    let maxBoardWidth;
+    if(stacked){
+      maxBoardWidth = containerW * 0.92;
+    } else {
+      const trayWidthPx = trayWrap.getBoundingClientRect().width || 300;
+      maxBoardWidth = containerW - trayWidthPx - 22 /* gap */ - 8;
+    }
+    maxBoardWidth = Math.min(maxBoardWidth, 900);
+    const maxBoardHeight = Math.min(availableH, 900);
 
     // Fit the whole image inside the available space, preserving its exact
     // aspect ratio (no cropping, no stretching).
@@ -686,36 +696,73 @@
   }
 
   function makeDraggable(canvas){
-    let dragging=false, offsetX=0, offsetY=0;
+    let dragging = false;
+    let offsetX=0, offsetY=0;
+    let pendingTimer = null;
+    let startX=0, startY=0;
 
-    function down(e){
+    const HOLD_DELAY = 140;       // ms before a touch is treated as "pick up the piece"
+    const MOVE_CANCEL_THRESHOLD = 10; // px of movement that cancels pickup (= it's a scroll)
+
+    function beginDrag(clientX, clientY){
       dragging = true;
       canvas.classList.add('dragging');
+      canvas.style.touchAction = 'none';
       const rect = canvas.getBoundingClientRect();
-      const clientX = e.touches? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches? e.touches[0].clientY : e.clientY;
       offsetX = clientX - rect.left;
       offsetY = clientY - rect.top;
-
       canvas.style.position = 'fixed';
-      canvas.style.left = (rect.left) + 'px';
-      canvas.style.top = (rect.top) + 'px';
+      canvas.style.left = rect.left + 'px';
+      canvas.style.top = rect.top + 'px';
       document.body.appendChild(canvas);
+    }
+
+    function mouseDown(e){
+      clearPending();
+      beginDrag(e.clientX, e.clientY);
       e.preventDefault();
     }
 
+    function touchStart(e){
+      const t = e.touches[0];
+      startX = t.clientX; startY = t.clientY;
+      clearPending();
+      // Don't preventDefault here: if this turns out to be a scroll gesture,
+      // the browser needs to be free to handle it natively.
+      pendingTimer = setTimeout(()=>{
+        pendingTimer = null;
+        beginDrag(startX, startY);
+      }, HOLD_DELAY);
+    }
+
+    function clearPending(){
+      if(pendingTimer){ clearTimeout(pendingTimer); pendingTimer = null; }
+    }
+
     function move(e){
-      if(!dragging) return;
-      const clientX = e.touches? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches? e.touches[0].clientY : e.clientY;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      if(!dragging){
+        if(pendingTimer){
+          const dx = clientX-startX, dy = clientY-startY;
+          if(Math.hypot(dx,dy) > MOVE_CANCEL_THRESHOLD){
+            clearPending(); // the finger moved before the hold completed: it's a scroll, not a pickup
+          }
+        }
+        return;
+      }
+      if(e.cancelable) e.preventDefault();
       canvas.style.left = (clientX-offsetX) + 'px';
       canvas.style.top = (clientY-offsetY) + 'px';
     }
 
     function up(e){
+      clearPending();
       if(!dragging) return;
       dragging = false;
       canvas.classList.remove('dragging');
+      canvas.style.touchAction = 'pan-y';
 
       const frameRect = frame.getBoundingClientRect();
       const canvasRect = canvas.getBoundingClientRect();
@@ -758,12 +805,13 @@
       tray.appendChild(canvas);
     }
 
-    canvas.addEventListener('mousedown', down);
-    canvas.addEventListener('touchstart', down, {passive:false});
+    canvas.addEventListener('mousedown', mouseDown);
+    canvas.addEventListener('touchstart', touchStart, {passive:true});
     window.addEventListener('mousemove', move);
     window.addEventListener('touchmove', move, {passive:false});
     window.addEventListener('mouseup', up);
     window.addEventListener('touchend', up);
+    window.addEventListener('touchcancel', up);
   }
 
   function updateCorrectness(canvas){
