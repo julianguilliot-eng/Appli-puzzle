@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puzzle Garage</title>
+<style>
+  :root{
+    --bg-top:#FFD447;
+    --bg-bottom:#FF8A3D;
+    --panel:#FFF8EC;
+    --ink:#2B2320;
+    --accent:#2E7D6B;
+    --accent2:#D64545;
+    --grid-line:#2B2320;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    font-family:'Trebuchet MS', 'Segoe UI', sans-serif;
+    background:linear-gradient(180deg,var(--bg-top) 0%, var(--bg-bottom) 100%);
+    color:var(--ink);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:24px 16px 60px;
+  }
+  h1{
+    font-size:clamp(28px,5vw,46px);
+    margin:6px 0 2px;
+    text-shadow:2px 2px 0 rgba(0,0,0,0.15);
+    letter-spacing:1px;
+  }
+  .subtitle{
+    margin:0 0 18px;
+    font-size:15px;
+    opacity:0.85;
+  }
+  .panel{
+    background:var(--panel);
+    border-radius:24px;
+    padding:20px 24px;
+    box-shadow:0 10px 0 rgba(0,0,0,0.15);
+    display:flex;
+    flex-wrap:wrap;
+    gap:18px;
+    align-items:center;
+    justify-content:center;
+    max-width:900px;
+    width:100%;
+    margin-bottom:22px;
+  }
+  .control{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+    min-width:140px;
+  }
+  .control label{
+    font-weight:bold;
+    font-size:14px;
+  }
+  input[type="file"]{
+    font-size:13px;
+    max-width:160px;
+  }
+  input[type="range"]{
+    width:150px;
+  }
+  .piece-count{
+    font-size:13px;
+    background:var(--accent);
+    color:white;
+    border-radius:12px;
+    padding:2px 10px;
+    font-weight:bold;
+  }
+  button{
+    border:none;
+    border-radius:14px;
+    padding:12px 22px;
+    font-size:16px;
+    font-weight:bold;
+    cursor:pointer;
+    color:white;
+    background:var(--accent2);
+    box-shadow:0 5px 0 rgba(0,0,0,0.2);
+    transition:transform 0.08s ease;
+  }
+  button:active{
+    transform:translateY(4px);
+    box-shadow:0 1px 0 rgba(0,0,0,0.2);
+  }
+  button.secondary{
+    background:var(--accent);
+  }
+  #stage{
+    position:relative;
+    width:min(92vw,560px);
+    aspect-ratio:1/1;
+    background:repeating-conic-gradient(#e7ded0 0% 25%, #ddd2bf 0% 50%) 50% / 30px 30px;
+    border-radius:18px;
+    box-shadow:0 10px 0 rgba(0,0,0,0.18), inset 0 0 0 6px var(--panel);
+    overflow:hidden;
+    touch-action:none;
+  }
+  .placeholder-msg{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:30px;
+    font-size:16px;
+    color:#8a7f6f;
+    font-weight:bold;
+  }
+  .piece{
+    position:absolute;
+    background-repeat:no-repeat;
+    border:2px solid var(--grid-line);
+    border-radius:4px;
+    box-shadow:0 3px 6px rgba(0,0,0,0.35);
+    cursor:grab;
+    transition:box-shadow 0.15s ease;
+  }
+  .piece.dragging{
+    cursor:grabbing;
+    z-index:50;
+    box-shadow:0 10px 18px rgba(0,0,0,0.45);
+  }
+  .piece.correct{
+    border-color:var(--accent);
+    box-shadow:0 0 0 3px var(--accent) inset;
+  }
+  #win-banner{
+    position:absolute;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background:rgba(255,255,255,0.88);
+    font-size:clamp(28px,6vw,44px);
+    font-weight:bold;
+    color:var(--accent2);
+    text-align:center;
+    flex-direction:column;
+    gap:10px;
+    z-index:100;
+  }
+  #win-banner span.emoji{
+    font-size:60px;
+  }
+  footer{
+    margin-top:24px;
+    font-size:12px;
+    opacity:0.7;
+    text-align:center;
+    max-width:480px;
+  }
+</style>
+</head>
+<body>
+
+<h1>🏁 Puzzle Garage 🏁</h1>
+<p class="subtitle">Choisis une image, règle le nombre de pièces, et assemble le puzzle !</p>
+
+<div class="panel">
+  <div class="control">
+    <label for="imgInput">📷 Choisir une image</label>
+    <input type="file" id="imgInput" accept="image/*">
+  </div>
+
+  <div class="control">
+    <label for="sizeRange">🧩 Difficulté</label>
+    <input type="range" id="sizeRange" min="2" max="8" value="3" step="1">
+    <span class="piece-count" id="pieceCountLabel">3 × 3 = 9 pièces</span>
+  </div>
+
+  <div class="control">
+    <label>&nbsp;</label>
+    <button id="shuffleBtn">🔀 Nouveau puzzle</button>
+  </div>
+</div>
+
+<div id="stage">
+  <div class="placeholder-msg" id="placeholderMsg">Choisis une image ci-dessus<br>pour commencer 🚗</div>
+  <div id="win-banner">
+    <span class="emoji">🏆</span>
+    <span>Bravo, puzzle terminé !</span>
+    <button class="secondary" id="playAgainBtn" style="margin-top:6px;">Rejouer</button>
+  </div>
+</div>
+
+<footer>
+  Astuce : cette page ne contient aucune image — choisis simplement une photo sur ton appareil.
+  Fonctionne 100% hors-ligne une fois ouverte, aucune donnée n'est envoyée nulle part.
+</footer>
+
+<audio id="clickSound" preload="auto">
+  <source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=" type="audio/wav">
+</audio>
+
+<script>
+(function(){
+  const imgInput = document.getElementById('imgInput');
+  const sizeRange = document.getElementById('sizeRange');
+  const pieceCountLabel = document.getElementById('pieceCountLabel');
+  const shuffleBtn = document.getElementById('shuffleBtn');
+  const stage = document.getElementById('stage');
+  const placeholderMsg = document.getElementById('placeholderMsg');
+  const winBanner = document.getElementById('win-banner');
+  const playAgainBtn = document.getElementById('playAgainBtn');
+
+  let currentImage = null;   // data URL
+  let gridSize = 3;
+  let pieces = [];           // {correctRow, correctCol, el, row, col}
+  let stageSize = 0;
+
+  function updatePieceLabel(){
+    const n = sizeRange.value;
+    pieceCountLabel.textContent = `${n} × ${n} = ${n*n} pièces`;
+  }
+  sizeRange.addEventListener('input', updatePieceLabel);
+  updatePieceLabel();
+
+  imgInput.addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      currentImage = ev.target.result;
+      gridSize = parseInt(sizeRange.value,10);
+      buildPuzzle();
+    };
+    reader.readAsDataURL(file);
+  });
+
+  shuffleBtn.addEventListener('click', ()=>{
+    if(!currentImage){
+      imgInput.click();
+      return;
+    }
+    gridSize = parseInt(sizeRange.value,10);
+    buildPuzzle();
+  });
+
+  playAgainBtn.addEventListener('click', ()=>{
+    winBanner.style.display = 'none';
+    buildPuzzle();
+  });
+
+  function measureStage(){
+    stageSize = stage.clientWidth;
+  }
+
+  function buildPuzzle(){
+    if(!currentImage) return;
+    placeholderMsg.style.display = 'none';
+    winBanner.style.display = 'none';
+    stage.querySelectorAll('.piece').forEach(p=>p.remove());
+    measureStage();
+
+    const n = gridSize;
+    const pieceSize = stageSize / n;
+    pieces = [];
+
+    // Build list of correct positions
+    let positions = [];
+    for(let r=0;r<n;r++){
+      for(let c=0;c<n;c++){
+        positions.push({r,c});
+      }
+    }
+
+    // Shuffle positions for placement on the board
+    let shuffled = positions.slice();
+    shuffleArray(shuffled);
+    // Ensure it's not already solved (avoid trivial win when n is small)
+    if(n>1){
+      let same = shuffled.every((p,i)=> p.r===positions[i].r && p.c===positions[i].c);
+      if(same){
+        [shuffled[0], shuffled[1]] = [shuffled[1], shuffled[0]];
+      }
+    }
+
+    positions.forEach((pos, idx)=>{
+      const piece = document.createElement('div');
+      piece.className = 'piece';
+      piece.style.width = pieceSize + 'px';
+      piece.style.height = pieceSize + 'px';
+      piece.style.backgroundImage = `url(${currentImage})`;
+      piece.style.backgroundSize = `${stageSize}px ${stageSize}px`;
+      piece.style.backgroundPosition = `-${pos.c*pieceSize}px -${pos.r*pieceSize}px`;
+
+      const startPos = shuffled[idx];
+      piece.style.left = (startPos.c*pieceSize) + 'px';
+      piece.style.top = (startPos.r*pieceSize) + 'px';
+
+      piece.dataset.correctRow = pos.r;
+      piece.dataset.correctCol = pos.c;
+      piece.dataset.row = startPos.r;
+      piece.dataset.col = startPos.c;
+
+      makeDraggable(piece, pieceSize);
+      stage.appendChild(piece);
+      pieces.push(piece);
+    });
+
+    checkWin(); // in case already solved after swap-avoidance logic
+  }
+
+  function shuffleArray(arr){
+    for(let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]] = [arr[j],arr[i]];
+    }
+  }
+
+  function makeDraggable(piece, pieceSize){
+    let dragging = false;
+    let offsetX=0, offsetY=0;
+
+    function pointerDown(e){
+      dragging = true;
+      piece.classList.add('dragging');
+      const rect = stage.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      offsetX = clientX - rect.left - parseFloat(piece.style.left);
+      offsetY = clientY - rect.top - parseFloat(piece.style.top);
+      stage.appendChild(piece); // bring to front
+      e.preventDefault();
+    }
+
+    function pointerMove(e){
+      if(!dragging) return;
+      const rect = stage.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      let x = clientX - rect.left - offsetX;
+      let y = clientY - rect.top - offsetY;
+      piece.style.left = x + 'px';
+      piece.style.top = y + 'px';
+    }
+
+    function pointerUp(e){
+      if(!dragging) return;
+      dragging = false;
+      piece.classList.remove('dragging');
+
+      // Snap to nearest grid cell
+      const n = gridSize;
+      let x = parseFloat(piece.style.left);
+      let y = parseFloat(piece.style.top);
+      let col = Math.round(x / pieceSize);
+      let row = Math.round(y / pieceSize);
+      col = Math.max(0, Math.min(n-1, col));
+      row = Math.max(0, Math.min(n-1, row));
+
+      // Check if target cell is occupied by another piece -> swap
+      const target = pieces.find(p => p!==piece && parseInt(p.dataset.row)===row && parseInt(p.dataset.col)===col);
+      if(target){
+        target.dataset.row = piece.dataset.row;
+        target.dataset.col = piece.dataset.col;
+        target.style.left = (parseInt(piece.dataset.col)*pieceSize) + 'px';
+        target.style.top = (parseInt(piece.dataset.row)*pieceSize) + 'px';
+        updatePieceStyle(target);
+      }
+
+      piece.dataset.row = row;
+      piece.dataset.col = col;
+      piece.style.left = (col*pieceSize) + 'px';
+      piece.style.top = (row*pieceSize) + 'px';
+      updatePieceStyle(piece);
+
+      checkWin();
+    }
+
+    piece.addEventListener('mousedown', pointerDown);
+    piece.addEventListener('touchstart', pointerDown, {passive:false});
+    window.addEventListener('mousemove', pointerMove);
+    window.addEventListener('touchmove', pointerMove, {passive:false});
+    window.addEventListener('mouseup', pointerUp);
+    window.addEventListener('touchend', pointerUp);
+  }
+
+  function updatePieceStyle(piece){
+    const correct = (piece.dataset.row === piece.dataset.correctRow && piece.dataset.col === piece.dataset.correctCol);
+    piece.classList.toggle('correct', correct);
+  }
+
+  function checkWin(){
+    pieces.forEach(updatePieceStyle);
+    const solved = pieces.every(p => p.dataset.row === p.dataset.correctRow && p.dataset.col === p.dataset.correctCol);
+    if(solved && pieces.length>0){
+      setTimeout(()=>{ winBanner.style.display = 'flex'; }, 250);
+    }
+  }
+
+  window.addEventListener('resize', ()=>{
+    if(currentImage) buildPuzzle();
+  });
+
+})();
+</script>
+
+</body>
+</html>
