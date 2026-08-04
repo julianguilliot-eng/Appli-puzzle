@@ -311,7 +311,7 @@
 
   let loadedImg = null;
   let gridCols = 3, gridRows = 3;
-  let pieceSize = 0;
+  let pieceW = 0, pieceH = 0;
   let padding = 0;
   let boardW = 480, boardH = 480;
   let drawX = 0, drawY = 0, drawW = 0, drawH = 0;
@@ -356,7 +356,8 @@
 
   function computeGridAndBoard(){
     const targetPieces = parseInt(sizeRange.value,10) ** 2;
-    const aspect = loadedImg.naturalWidth / loadedImg.naturalHeight;
+    const imgW = loadedImg.naturalWidth, imgH = loadedImg.naturalHeight;
+    const aspect = imgW / imgH;
 
     let cols = Math.max(2, Math.round(Math.sqrt(targetPieces * aspect)));
     let rows = Math.max(2, Math.round(targetPieces / cols));
@@ -366,19 +367,18 @@
     const maxBoardWidth = Math.min(containerW * 0.55, 480);
     const maxBoardHeight = Math.min(window.innerHeight * 0.55, 480);
 
-    pieceSize = Math.min(maxBoardWidth / cols, maxBoardHeight / rows);
-    pieceSize = Math.max(pieceSize, 40);
+    // Fit the whole image inside the available space, preserving its exact
+    // aspect ratio (no cropping, no stretching).
+    const scale = Math.min(maxBoardWidth / imgW, maxBoardHeight / imgH);
+    boardW = imgW * scale;
+    boardH = imgH * scale;
 
-    boardW = cols * pieceSize;
-    boardH = rows * pieceSize;
-    padding = pieceSize * 0.32;
+    pieceW = boardW / cols;
+    pieceH = boardH / rows;
+    padding = Math.min(pieceW, pieceH) * 0.32;
 
-    // "cover" scaling so the image fills the board without stretching/deforming
-    const scale = Math.max(boardW / loadedImg.naturalWidth, boardH / loadedImg.naturalHeight);
-    drawW = loadedImg.naturalWidth * scale;
-    drawH = loadedImg.naturalHeight * scale;
-    drawX = (boardW - drawW) / 2;
-    drawY = (boardH - drawH) / 2;
+    // The image maps 1:1 onto the board — nothing is cropped or deformed.
+    drawX = 0; drawY = 0; drawW = boardW; drawH = boardH;
 
     pieceCountLabel.textContent = `${cols} × ${rows} = ${cols*rows} pièces`;
   }
@@ -400,10 +400,10 @@
       for(let c=0;c<gridCols;c++){
         const slot = document.createElement('div');
         slot.className = 'slot';
-        slot.style.left = (c*pieceSize) + 'px';
-        slot.style.top = (r*pieceSize) + 'px';
-        slot.style.width = pieceSize + 'px';
-        slot.style.height = pieceSize + 'px';
+        slot.style.left = (c*pieceW) + 'px';
+        slot.style.top = (r*pieceH) + 'px';
+        slot.style.width = pieceW + 'px';
+        slot.style.height = pieceH + 'px';
         frame.appendChild(slot);
       }
     }
@@ -478,15 +478,16 @@
   }
 
   function makePieceCanvas(row,col, top,right,bottom,left){
-    const size = pieceSize + padding*2;
+    const cw = pieceW + padding*2;
+    const ch = pieceH + padding*2;
     const canvas = document.createElement('canvas');
-    canvas.width = size; canvas.height = size;
+    canvas.width = cw; canvas.height = ch;
     canvas.className = 'piece-canvas';
-    canvas.style.width = size+'px';
-    canvas.style.height = size+'px';
+    canvas.style.width = cw+'px';
+    canvas.style.height = ch+'px';
 
     const ctx = canvas.getContext('2d');
-    const x0 = padding, y0 = padding, w = pieceSize, h = pieceSize;
+    const x0 = padding, y0 = padding, w = pieceW, h = pieceH;
 
     ctx.beginPath();
     ctx.moveTo(x0,y0);
@@ -498,7 +499,7 @@
 
     ctx.save();
     ctx.clip();
-    ctx.drawImage(loadedImg, drawX-(col*pieceSize)+padding, drawY-(row*pieceSize)+padding, drawW, drawH);
+    ctx.drawImage(loadedImg, drawX-(col*pieceW)+padding, drawY-(row*pieceH)+padding, drawW, drawH);
     ctx.restore();
 
     ctx.lineWidth = 2.5;
@@ -552,8 +553,8 @@
       if(insideFrame){
         const localX = centerX - frameRect.left;
         const localY = centerY - frameRect.top;
-        let col = Math.floor(localX / pieceSize);
-        let row = Math.floor(localY / pieceSize);
+        let col = Math.floor(localX / pieceW);
+        let row = Math.floor(localY / pieceH);
         col = Math.max(0, Math.min(gridCols-1, col));
         row = Math.max(0, Math.min(gridRows-1, row));
 
@@ -564,8 +565,8 @@
           canvas.style.position = 'absolute';
           canvas.classList.add('in-frame');
           frame.appendChild(canvas);
-          canvas.style.left = (col*pieceSize - padding) + 'px';
-          canvas.style.top = (row*pieceSize - padding) + 'px';
+          canvas.style.left = (col*pieceW - padding) + 'px';
+          canvas.style.top = (row*pieceH - padding) + 'px';
           canvas.dataset.placed = "1";
           canvas.dataset.placedRow = row;
           canvas.dataset.placedCol = col;
