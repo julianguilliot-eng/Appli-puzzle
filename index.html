@@ -96,9 +96,11 @@
   #puzzleScroll{
     flex:1 1 auto;
     min-height:0;
-    overflow-y:auto;
-    -webkit-overflow-scrolling:touch;
-    padding:0 16px 30px;
+    overflow:hidden;
+    padding:0 16px 16px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
   }
 
   #screenPuzzle .play-area{
@@ -306,16 +308,14 @@
   #tray{
     flex:1 1 auto;
     min-height:0;
-    overflow-y:auto;
+    overflow:hidden;
     display:flex;
     flex-wrap:wrap;
-    gap:10px;
-    align-content:flex-start;
+    gap:8px;
+    align-content:center;
     justify-content:center;
     padding-right:2px;
   }
-  #tray::-webkit-scrollbar{ width:8px; }
-  #tray::-webkit-scrollbar-thumb{ background:rgba(90,55,35,0.35); border-radius:8px; }
 
   @media (max-width:700px) and (orientation:portrait){
     #trayWrap{ height:170px !important; max-width:none; width:100%; }
@@ -693,6 +693,15 @@
       }
     }
 
+    // Work out how small the tray pieces need to be so that ALL of them fit
+    // inside the tray box at once, with no scrolling ever required.
+    const fullW = pieceW + padding*2;
+    const fullH = pieceH + padding*2;
+    const totalPieces = gridCols * gridRows;
+    const trayInnerW = tray.clientWidth || 200;
+    const trayInnerH = tray.clientHeight || 200;
+    trayScale = computeTrayScale(fullW, fullH, totalPieces, trayInnerW, trayInnerH, 8);
+
     const vEdge = [];
     const hEdge = [];
     for(let r=0;r<gridRows;r++){
@@ -727,13 +736,33 @@
     });
   }
 
-  const TRAY_SCALE = 0.55; // pieces are shown smaller in the tray, full size once picked up
+
+  let trayScale = 0.55; // recomputed per build so every piece fits without scrolling
+
+  function computeTrayScale(fullW, fullH, totalPieces, trayInnerW, trayInnerH, gap){
+    const minScale = 0.16, maxScale = 0.85;
+    function fits(scale){
+      const w = fullW*scale, h = fullH*scale;
+      const perRow = Math.max(1, Math.floor((trayInnerW + gap) / (w + gap)));
+      const rowsNeeded = Math.ceil(totalPieces / perRow);
+      const neededHeight = rowsNeeded * (h + gap);
+      return neededHeight <= trayInnerH + gap && w <= trayInnerW;
+    }
+    if(fits(maxScale)) return maxScale;
+    if(!fits(minScale)) return minScale; // even the smallest size can't fully fit — use it anyway
+    let lo = minScale, hi = maxScale;
+    for(let i=0;i<18;i++){
+      const mid = (lo+hi)/2;
+      if(fits(mid)) lo = mid; else hi = mid;
+    }
+    return lo;
+  }
 
   function applyTraySize(canvas){
     const fullW = parseFloat(canvas.dataset.fullW);
     const fullH = parseFloat(canvas.dataset.fullH);
-    canvas.style.width = (fullW * TRAY_SCALE) + 'px';
-    canvas.style.height = (fullH * TRAY_SCALE) + 'px';
+    canvas.style.width = (fullW * trayScale) + 'px';
+    canvas.style.height = (fullH * trayScale) + 'px';
   }
 
   function applyFullSize(canvas){
@@ -812,30 +841,9 @@
     return canvas;
   }
 
-  function findScrollTarget(el){
-    let node = el.parentElement;
-    while(node && node !== document.body){
-      const style = window.getComputedStyle(node);
-      if((style.overflowY === 'auto' || style.overflowY === 'scroll') && node.scrollHeight > node.clientHeight){
-        return node;
-      }
-      node = node.parentElement;
-    }
-    return document.scrollingElement || document.documentElement;
-  }
-
   function makeDraggable(canvas){
     let dragging = false;
     let offsetX=0, offsetY=0;
-    let pendingTimer = null;
-    let startX=0, startY=0;
-    let scrolling = false;
-    let scrollTarget = null;
-    let lastY = 0;
-
-    const HOLD_DELAY = 220;            // ms a still touch needs before it's treated as a pickup
-    const SCROLL_AXIS_THRESHOLD = 6;   // px of mostly-vertical movement => it's a scroll
-    const DRAG_AXIS_THRESHOLD = 14;    // px of movement (any other direction) => it's a pickup
 
     function beginDrag(clientX, clientY){
       dragging = true;
@@ -850,79 +858,26 @@
     }
 
     function mouseDown(e){
-      clearPending();
       beginDrag(e.clientX, e.clientY);
       e.preventDefault();
     }
 
     function touchStart(e){
       const t = e.touches[0];
-      startX = t.clientX; startY = t.clientY;
-      lastY = startY;
-      scrolling = false;
-      scrollTarget = null;
-      clearPending();
-      pendingTimer = setTimeout(()=>{
-        pendingTimer = null;
-        beginDrag(startX, startY);
-      }, HOLD_DELAY);
-    }
-
-    function clearPending(){
-      if(pendingTimer){ clearTimeout(pendingTimer); pendingTimer = null; }
-    }
-
-    function startScrolling(e, clientY){
-      scrolling = true;
-      scrollTarget = findScrollTarget(canvas);
+      beginDrag(t.clientX, t.clientY);
       if(e.cancelable) e.preventDefault();
-      const deltaY = lastY - clientY;
-      if(scrollTarget) scrollTarget.scrollTop += deltaY;
-      lastY = clientY;
     }
 
     function move(e){
+      if(!dragging) return;
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-      if(dragging){
-        if(e.cancelable) e.preventDefault();
-        canvas.style.left = (clientX-offsetX) + 'px';
-        canvas.style.top = (clientY-offsetY) + 'px';
-        return;
-      }
-
-      if(scrolling){
-        if(e.cancelable) e.preventDefault();
-        const deltaY = lastY - clientY;
-        if(scrollTarget) scrollTarget.scrollTop += deltaY;
-        lastY = clientY;
-        return;
-      }
-
-      if(pendingTimer){
-        const dx = clientX-startX, dy = clientY-startY;
-        const adx = Math.abs(dx), ady = Math.abs(dy);
-
-        if(ady > SCROLL_AXIS_THRESHOLD && ady > adx){
-          // mostly-vertical movement: this is a scroll gesture, take it over manually
-          clearPending();
-          startScrolling(e, clientY);
-        } else if(Math.hypot(dx,dy) > DRAG_AXIS_THRESHOLD){
-          // deliberate movement that isn't a vertical swipe: pick the piece up right away
-          clearPending();
-          beginDrag(clientX, clientY);
-          if(e.cancelable) e.preventDefault();
-          canvas.style.left = (clientX-offsetX) + 'px';
-          canvas.style.top = (clientY-offsetY) + 'px';
-        }
-      }
+      if(e.cancelable) e.preventDefault();
+      canvas.style.left = (clientX-offsetX) + 'px';
+      canvas.style.top = (clientY-offsetY) + 'px';
     }
 
     function up(e){
-      clearPending();
-      scrolling = false;
-      scrollTarget = null;
       if(!dragging) return;
       dragging = false;
       canvas.classList.remove('dragging');
