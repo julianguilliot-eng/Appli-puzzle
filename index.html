@@ -596,7 +596,11 @@
 
     pieceW = boardW / cols;
     pieceH = boardH / rows;
-    padding = Math.round(Math.min(pieceW, pieceH) * 0.32);
+    // Use the LARGER of the two piece dimensions (not the smaller one) so the
+    // margin always comfortably contains the tab bulge in both directions —
+    // otherwise, on a very tall/wide image (pieces far from square), the tab
+    // on the wider/taller edge gets clipped and pieces never quite touch.
+    padding = Math.round(Math.max(pieceW, pieceH) * 0.32);
 
     // The image maps 1:1 onto the board — nothing is cropped or deformed.
     drawX = 0; drawY = 0; drawW = boardW; drawH = boardH;
