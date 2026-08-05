@@ -436,6 +436,7 @@
   backBtn.addEventListener('click', ()=> showScreen('setup'));
 
   let loadedImg = null;
+  let loadToken = 0; // guards against a slow/late image load overwriting a newer one
   let folderImages = [];
   let folderIndex = -1;
   let gridCols = 3, gridRows = 3;
@@ -467,9 +468,11 @@
     fileNameLabel.classList.remove('empty');
 
     const reader = new FileReader();
+    const myToken = ++loadToken;
     reader.onload = (ev)=>{
       const img = new Image();
       img.onload = ()=>{
+        if(myToken !== loadToken) return; // a newer load started meanwhile
         loadedImg = img;
       };
       img.src = ev.target.result;
@@ -503,9 +506,11 @@
     fileNameLabel.classList.remove('empty');
 
     const reader = new FileReader();
+    const myToken = ++loadToken;
     reader.onload = (ev)=>{
       const img = new Image();
       img.onload = ()=>{
+        if(myToken !== loadToken) return; // a newer load started meanwhile
         loadedImg = img;
         if(onDone) onDone();
       };
@@ -536,9 +541,14 @@
   });
 
   newFromPuzzleBtn.addEventListener('click', ()=>{
+    if(newFromPuzzleBtn.disabled) return;
     if(folderImages.length > 0){
       folderIndex = (folderIndex + 1) % folderImages.length;
-      loadImageFromFolder(folderIndex, ()=> buildPuzzle());
+      newFromPuzzleBtn.disabled = true;
+      loadImageFromFolder(folderIndex, ()=>{
+        buildPuzzle();
+        newFromPuzzleBtn.disabled = false;
+      });
       return;
     }
     if(!loadedImg) return;
@@ -581,12 +591,12 @@
     // Fit the whole image inside the available space, preserving its exact
     // aspect ratio (no cropping, no stretching).
     const scale = Math.min(maxBoardWidth / imgW, maxBoardHeight / imgH);
-    boardW = imgW * scale;
-    boardH = imgH * scale;
+    boardW = Math.round(imgW * scale);
+    boardH = Math.round(imgH * scale);
 
     pieceW = boardW / cols;
     pieceH = boardH / rows;
-    padding = Math.min(pieceW, pieceH) * 0.32;
+    padding = Math.round(Math.min(pieceW, pieceH) * 0.32);
 
     // The image maps 1:1 onto the board — nothing is cropped or deformed.
     drawX = 0; drawY = 0; drawW = boardW; drawH = boardH;
@@ -599,7 +609,11 @@
     placeholderMsg.style.display = 'none';
     winToast.style.display = 'none';
 
-    frame.querySelectorAll('.piece-canvas, .slot').forEach(el=>el.remove());
+    // Remove every leftover piece, wherever it currently lives — including
+    // one that might still be mid-drag (reparented onto <body>) — so a
+    // rebuild never mixes pieces from a previous puzzle with the new one.
+    document.querySelectorAll('.piece-canvas').forEach(el=>el.remove());
+    frame.querySelectorAll('.slot').forEach(el=>el.remove());
     tray.innerHTML = '';
 
     computeGridAndBoard();
