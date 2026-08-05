@@ -85,6 +85,13 @@
     #backBtn:hover{ box-shadow:0 6px 0 rgba(90,55,35,0.3); }
   }
   #newFromPuzzleBtn{ padding:10px 18px; font-size:14px; }
+  .topbar-right{ display:flex; align-items:center; gap:8px; }
+  #fullscreenBtn{
+    padding:10px 14px;
+    font-size:16px;
+    line-height:1;
+  }
+  #fullscreenBtn.hidden{ display:none; }
 
   #puzzleScroll{
     flex:1 1 auto;
@@ -374,7 +381,10 @@
   <div class="puzzle-topbar">
     <button id="backBtn">← Retour</button>
     <span class="topbar-title">🧩 Puzzle</span>
-    <button id="newFromPuzzleBtn" class="secondary">🔀 Nouveau</button>
+    <div class="topbar-right">
+      <button id="fullscreenBtn" class="secondary" title="Plein écran">⛶</button>
+      <button id="newFromPuzzleBtn" class="secondary">🔀 Nouveau</button>
+    </div>
   </div>
 
   <div id="puzzleScroll">
@@ -408,6 +418,7 @@
   const startBtn = document.getElementById('startBtn');
   const backBtn = document.getElementById('backBtn');
   const newFromPuzzleBtn = document.getElementById('newFromPuzzleBtn');
+  const fullscreenBtn = document.getElementById('fullscreenBtn');
   const frame = document.getElementById('frame');
   const frameOuter = document.getElementById('frameOuter');
   const trayWrap = document.getElementById('trayWrap');
@@ -433,7 +444,51 @@
     }
   }
 
-  backBtn.addEventListener('click', ()=> showScreen('setup'));
+  backBtn.addEventListener('click', ()=>{
+    if(fsElement()) exitFs();
+    showScreen('setup');
+  });
+
+  // --- Fullscreen mode -----------------------------------------------
+  function fsElement(){
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+  }
+  function requestFs(el){
+    const fn = el.requestFullscreen || el.webkitRequestFullscreen;
+    if(fn) return fn.call(el);
+    return null;
+  }
+  function exitFs(){
+    const fn = document.exitFullscreen || document.webkitExitFullscreen;
+    if(fn) return fn.call(document);
+    return null;
+  }
+  const fullscreenSupported = !!(
+    document.documentElement.requestFullscreen ||
+    document.documentElement.webkitRequestFullscreen
+  );
+  if(!fullscreenSupported){
+    fullscreenBtn.classList.add('hidden'); // e.g. most iPhones: silently offer nothing rather than a button that fails
+  }
+
+  function updateFullscreenBtn(){
+    fullscreenBtn.textContent = fsElement() ? '⤢' : '⛶';
+    fullscreenBtn.title = fsElement() ? 'Quitter le plein écran' : 'Plein écran';
+  }
+
+  fullscreenBtn.addEventListener('click', ()=>{
+    try{
+      if(fsElement()){
+        exitFs();
+      } else {
+        requestFs(screenPuzzle);
+      }
+    }catch(err){ /* ignore: fullscreen can be refused, no need to break the game */ }
+  });
+
+  document.addEventListener('fullscreenchange', updateFullscreenBtn);
+  document.addEventListener('webkitfullscreenchange', updateFullscreenBtn);
+  // ---------------------------------------------------------------------
 
   let loadedImg = null;
   let loadToken = 0; // guards against a slow/late image load overwriting a newer one
