@@ -730,16 +730,15 @@
   const TRAY_SCALE = 0.55; // pieces are shown smaller in the tray, full size once picked up
 
   function applyTraySize(canvas){
-    const full = parseFloat(canvas.dataset.fullSize);
-    const small = full * TRAY_SCALE;
-    canvas.style.width = small + 'px';
-    canvas.style.height = small + 'px';
+    const fullW = parseFloat(canvas.dataset.fullW);
+    const fullH = parseFloat(canvas.dataset.fullH);
+    canvas.style.width = (fullW * TRAY_SCALE) + 'px';
+    canvas.style.height = (fullH * TRAY_SCALE) + 'px';
   }
 
   function applyFullSize(canvas){
-    const full = parseFloat(canvas.dataset.fullSize);
-    canvas.style.width = full + 'px';
-    canvas.style.height = full + 'px';
+    canvas.style.width = canvas.dataset.fullW + 'px';
+    canvas.style.height = canvas.dataset.fullH + 'px';
   }
 
   function shuffleArray(arr){
@@ -808,7 +807,8 @@
     ctx.stroke();
 
     canvas.dataset.padding = padding;
-    canvas.dataset.fullSize = cw;
+    canvas.dataset.fullW = cw;
+    canvas.dataset.fullH = ch;
     return canvas;
   }
 
@@ -841,9 +841,8 @@
       dragging = true;
       canvas.classList.add('dragging');
       applyFullSize(canvas);
-      const full = parseFloat(canvas.dataset.fullSize);
-      offsetX = full/2;
-      offsetY = full/2;
+      offsetX = parseFloat(canvas.dataset.fullW)/2;
+      offsetY = parseFloat(canvas.dataset.fullH)/2;
       canvas.style.position = 'fixed';
       canvas.style.left = (clientX-offsetX) + 'px';
       canvas.style.top = (clientY-offsetY) + 'px';
