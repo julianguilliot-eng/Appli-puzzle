@@ -312,6 +312,7 @@
     filter:drop-shadow(0 3px 4px rgba(0,0,0,0.35));
     z-index:5;
     flex:0 0 auto;
+    transition: width .15s ease, height .15s ease;
   }
   .piece-canvas.in-frame{ position:absolute; z-index:5; }
   .piece-canvas.dragging{ cursor:grabbing; z-index:999; filter:drop-shadow(0 8px 10px rgba(0,0,0,0.45)); }
@@ -627,8 +628,24 @@
 
       tray.appendChild(canvas);
       makeDraggable(canvas);
+      applyTraySize(canvas);
       piecesData.push(canvas);
     });
+  }
+
+  const TRAY_SCALE = 0.55; // pieces are shown smaller in the tray, full size once picked up
+
+  function applyTraySize(canvas){
+    const full = parseFloat(canvas.dataset.fullSize);
+    const small = full * TRAY_SCALE;
+    canvas.style.width = small + 'px';
+    canvas.style.height = small + 'px';
+  }
+
+  function applyFullSize(canvas){
+    const full = parseFloat(canvas.dataset.fullSize);
+    canvas.style.width = full + 'px';
+    canvas.style.height = full + 'px';
   }
 
   function shuffleArray(arr){
@@ -697,6 +714,7 @@
     ctx.stroke();
 
     canvas.dataset.padding = padding;
+    canvas.dataset.fullSize = cw;
     return canvas;
   }
 
@@ -721,18 +739,20 @@
     let scrollTarget = null;
     let lastY = 0;
 
-    const HOLD_DELAY = 130;       // ms before a still touch is treated as "pick up the piece"
-    const MOVE_CANCEL_THRESHOLD = 8; // px of movement that cancels pickup (= it's a scroll)
+    const HOLD_DELAY = 220;            // ms a still touch needs before it's treated as a pickup
+    const SCROLL_AXIS_THRESHOLD = 6;   // px of mostly-vertical movement => it's a scroll
+    const DRAG_AXIS_THRESHOLD = 14;    // px of movement (any other direction) => it's a pickup
 
     function beginDrag(clientX, clientY){
       dragging = true;
       canvas.classList.add('dragging');
-      const rect = canvas.getBoundingClientRect();
-      offsetX = clientX - rect.left;
-      offsetY = clientY - rect.top;
+      applyFullSize(canvas);
+      const full = parseFloat(canvas.dataset.fullSize);
+      offsetX = full/2;
+      offsetY = full/2;
       canvas.style.position = 'fixed';
-      canvas.style.left = rect.left + 'px';
-      canvas.style.top = rect.top + 'px';
+      canvas.style.left = (clientX-offsetX) + 'px';
+      canvas.style.top = (clientY-offsetY) + 'px';
       document.body.appendChild(canvas);
     }
 
@@ -759,6 +779,15 @@
       if(pendingTimer){ clearTimeout(pendingTimer); pendingTimer = null; }
     }
 
+    function startScrolling(e, clientY){
+      scrolling = true;
+      scrollTarget = findScrollTarget(canvas);
+      if(e.cancelable) e.preventDefault();
+      const deltaY = lastY - clientY;
+      if(scrollTarget) scrollTarget.scrollTop += deltaY;
+      lastY = clientY;
+    }
+
     function move(e){
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -780,18 +809,19 @@
 
       if(pendingTimer){
         const dx = clientX-startX, dy = clientY-startY;
-        if(Math.hypot(dx,dy) > MOVE_CANCEL_THRESHOLD){
-          // The finger moved before the hold completed: treat this as a
-          // scroll gesture and take over scrolling manually (since the
-          // canvas can't rely on the browser's native touch scrolling
-          // while it's also used for dragging pieces).
+        const adx = Math.abs(dx), ady = Math.abs(dy);
+
+        if(ady > SCROLL_AXIS_THRESHOLD && ady > adx){
+          // mostly-vertical movement: this is a scroll gesture, take it over manually
           clearPending();
-          scrolling = true;
-          scrollTarget = findScrollTarget(canvas);
+          startScrolling(e, clientY);
+        } else if(Math.hypot(dx,dy) > DRAG_AXIS_THRESHOLD){
+          // deliberate movement that isn't a vertical swipe: pick the piece up right away
+          clearPending();
+          beginDrag(clientX, clientY);
           if(e.cancelable) e.preventDefault();
-          const deltaY = lastY - clientY;
-          if(scrollTarget) scrollTarget.scrollTop += deltaY;
-          lastY = clientY;
+          canvas.style.left = (clientX-offsetX) + 'px';
+          canvas.style.top = (clientY-offsetY) + 'px';
         }
       }
     }
@@ -843,6 +873,7 @@
       canvas.classList.remove('placed-correct');
       canvas.dataset.placed = "0";
       tray.appendChild(canvas);
+      applyTraySize(canvas);
     }
 
     canvas.addEventListener('mousedown', mouseDown);
