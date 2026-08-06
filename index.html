@@ -9,16 +9,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg-1:#FFE9BD;
-    --bg-2:#FF8F5E;
-    --panel:#FFFCF5;
-    --ink:#3A2E27;
-    --wood-1:#7A4A32;
-    --wood-2:#5B3222;
-    --mat-a:#F4E9D8;
-    --mat-b:#E7D9C1;
-    --teal:#1F9D82;
-    --teal-dark:#157A66;
+    --bg-1:#CDEBFB;
+    --bg-2:#4C93C7;
+    --panel:#F4FAFF;
+    --ink:#1C3A52;
+    --wood-1:#2E6690;
+    --wood-2:#153650;
+    --mat-a:#EAF5FC;
+    --mat-b:#D3E9F8;
+    --teal:#2C8C7E;
+    --teal-dark:#1F6B60;
     --coral:#F0562E;
     --coral-dark:#C7411E;
     --gold:#F4B93E;
@@ -78,11 +78,11 @@
     font-size:14px;
     background:var(--panel);
     color:var(--wood-2);
-    box-shadow:0 4px 0 rgba(90,55,35,0.3);
+    box-shadow:0 4px 0 rgba(21,54,80,0.3);
   }
-  #backBtn:active{ box-shadow:0 1px 0 rgba(90,55,35,0.3); }
+  #backBtn:active{ box-shadow:0 1px 0 rgba(21,54,80,0.3); }
   @media (hover:hover){
-    #backBtn:hover{ box-shadow:0 6px 0 rgba(90,55,35,0.3); }
+    #backBtn:hover{ box-shadow:0 6px 0 rgba(21,54,80,0.3); }
   }
   #newFromPuzzleBtn{ padding:10px 18px; font-size:14px; }
   .topbar-right{ display:flex; align-items:center; gap:8px; }
@@ -130,7 +130,7 @@
     background:var(--panel);
     border-radius:26px;
     padding:18px 24px;
-    box-shadow:0 3px 0 rgba(0,0,0,0.06) inset, 0 12px 0 rgba(90,55,35,0.25);
+    box-shadow:0 3px 0 rgba(0,0,0,0.06) inset, 0 12px 0 rgba(21,54,80,0.25);
     display:flex;
     flex-wrap:wrap;
     gap:20px;
@@ -139,7 +139,7 @@
     max-width:960px;
     width:100%;
     margin-bottom:22px;
-    border:3px solid rgba(90,55,35,0.12);
+    border:3px solid rgba(21,54,80,0.12);
   }
   .control{ display:flex; flex-direction:column; align-items:center; gap:7px; min-width:150px; }
   .control label{
@@ -257,38 +257,50 @@
   #frameOuter{
     flex:0 0 auto;
     background:linear-gradient(155deg,var(--wood-1),var(--wood-2));
-    border-radius:22px;
-    padding:16px;
+    border-radius:8px;
+    padding:14px;
     box-shadow:0 14px 0 rgba(0,0,0,0.18), inset 0 0 0 2px rgba(255,255,255,0.08);
   }
   #frame{
     position:relative;
     background:repeating-conic-gradient(var(--mat-a) 0% 25%,var(--mat-b) 0% 50%) 50% / 26px 26px;
-    border-radius:12px;
+    border-radius:2px;
     box-shadow:inset 0 0 0 5px rgba(255,255,255,0.55), inset 0 2px 8px rgba(0,0,0,0.15);
     overflow:visible;
   }
+  .frame-watermark{
+    position:absolute;
+    top:0; left:0;
+    opacity:0.3;
+    pointer-events:none;
+    display:none;
+    z-index:1;
+    -webkit-user-select:none; user-select:none;
+    -webkit-touch-callout:none;
+  }
   .slot{
     position:absolute;
-    border:2px dashed rgba(90,55,35,0.3);
-    border-radius:4px;
+    border:2px dashed rgba(21,54,80,0.3);
+    border-radius:2px;
     box-sizing:border-box;
     pointer-events:none;
+    z-index:2;
   }
   .placeholder-msg{
     position:absolute; top:0; left:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center;
     text-align:center; padding:30px; font-family:'Fredoka',sans-serif; font-size:16px;
-    color:rgba(90,55,35,0.55); font-weight:600; line-height:1.5;
+    color:rgba(21,54,80,0.55); font-weight:600; line-height:1.5;
     background:repeating-conic-gradient(var(--mat-a) 0% 25%,var(--mat-b) 0% 50%) 50% / 26px 26px;
-    border-radius:12px;
+    border-radius:2px;
+    z-index:3;
   }
 
   #trayWrap{
     flex:0 0 auto;
     width:clamp(220px,24vw,320px);
-    background:rgba(255,252,245,0.6);
-    border:3px dashed rgba(90,55,35,0.3);
-    border-radius:20px;
+    background:rgba(244,250,255,0.6);
+    border:3px dashed rgba(21,54,80,0.3);
+    border-radius:10px;
     padding:14px;
     display:flex;
     flex-direction:column;
@@ -396,6 +408,7 @@
     <div class="play-area" id="playArea">
       <div id="frameOuter">
         <div id="frame">
+          <img class="frame-watermark" id="frameWatermark" alt="">
           <div class="placeholder-msg" id="placeholderMsg">Choisis une image<br>pour commencer 🧩</div>
         </div>
       </div>
@@ -424,6 +437,7 @@
   const trayWrap = document.getElementById('trayWrap');
   const tray = document.getElementById('tray');
   const placeholderMsg = document.getElementById('placeholderMsg');
+  const frameWatermark = document.getElementById('frameWatermark');
   const winToast = document.getElementById('winToast');
   const winToastText = document.getElementById('winToastText');
   const playAgainBtn = document.getElementById('playAgainBtn');
@@ -681,6 +695,11 @@
     frame.style.height = boardH + 'px';
     trayWrap.style.height = boardH + 'px';
 
+    frameWatermark.src = loadedImg.src;
+    frameWatermark.style.width = boardW + 'px';
+    frameWatermark.style.height = boardH + 'px';
+    frameWatermark.style.display = 'block';
+
     for(let r=0;r<gridRows;r++){
       for(let c=0;c<gridCols;c++){
         const slot = document.createElement('div');
@@ -832,7 +851,7 @@
     ctx.restore();
 
     ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(58,46,39,0.45)';
+    ctx.strokeStyle = 'rgba(21,54,80,0.45)';
     ctx.stroke();
 
     canvas.dataset.padding = padding;
